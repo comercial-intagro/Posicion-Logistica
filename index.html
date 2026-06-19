@@ -71,8 +71,9 @@
     <header class="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md z-50 relative border-b border-emerald-700">
         <div class="container mx-auto px-5 py-2.5 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <div class="p-1.5 bg-emerald-600 rounded-lg shadow-inner border border-emerald-500">
-                    <i data-lucide="tractor" class="w-5 h-5 text-white"></i>
+                <div class="bg-white/95 rounded-lg shadow-inner border border-emerald-500 flex items-center justify-center overflow-hidden" style="height:38px; min-width:38px; padding:3px;">
+                    <img id="empresaLogo" src="logo.png" alt="Intagro" style="height:100%; width:auto; object-fit:contain;" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+                    <div id="logoFallback" class="items-center justify-center text-emerald-700 font-black text-lg" style="display:none; width:32px; height:32px;">I</div>
                 </div>
                 <div>
                     <h1 class="text-lg font-black tracking-tight text-white leading-none mb-0 drop-shadow-sm">POSICION LOGISTICA ARGENTRADING SA</h1>
@@ -199,9 +200,15 @@
                     <h2 class="font-black text-white text-[10px] tracking-widest uppercase flex items-center gap-1.5 drop-shadow-sm">
                         <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-blue-100"></i> A Entregar (Ventas)
                     </h2>
-                    <button onclick="App.toggleMaximize('venta')" class="text-blue-200 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
-                        <i id="iconMaxVenta" data-lucide="maximize-2" class="w-4 h-4"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3 h-3 absolute left-2 top-1.5 text-blue-200"></i>
+                            <input type="text" id="searchVenta" placeholder="Buscar..." onkeyup="App.filterGrid('venta', this.value)" class="pl-6 pr-2 py-0.5 text-[10px] bg-blue-800/40 border border-blue-400/40 rounded text-white placeholder-blue-200 focus:outline-none focus:bg-blue-800/70 w-28 transition-all focus:w-40">
+                        </div>
+                        <button onclick="App.toggleMaximize('venta')" class="text-blue-200 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
+                            <i id="iconMaxVenta" data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
                 <!-- El contenido se inyecta por JS para permitir el scroll interno perfecto -->
                 <div id="panelVentaContent" class="flex-grow overflow-auto min-h-0 bg-white"></div>
@@ -218,9 +225,15 @@
                     <h2 class="font-black text-white text-[10px] tracking-widest uppercase flex items-center gap-1.5 drop-shadow-sm">
                         <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-100"></i> A Recibir (Compras)
                     </h2>
-                    <button onclick="App.toggleMaximize('compra')" class="text-emerald-100 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
-                        <i id="iconMaxCompra" data-lucide="maximize-2" class="w-4 h-4"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3 h-3 absolute left-2 top-1.5 text-emerald-100"></i>
+                            <input type="text" id="searchCompra" placeholder="Buscar..." onkeyup="App.filterGrid('compra', this.value)" class="pl-6 pr-2 py-0.5 text-[10px] bg-emerald-800/40 border border-emerald-300/40 rounded text-white placeholder-emerald-100 focus:outline-none focus:bg-emerald-800/70 w-28 transition-all focus:w-40">
+                        </div>
+                        <button onclick="App.toggleMaximize('compra')" class="text-emerald-100 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
+                            <i id="iconMaxCompra" data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
                 <div id="panelCompraContent" class="flex-grow overflow-auto min-h-0 bg-white"></div>
             </div>
@@ -233,6 +246,10 @@
                         <span id="detalleTitulo" class="font-semibold text-slate-300 ml-1.5 capitalize normal-case text-[10px]">- Selecciona un volumen arriba</span>
                     </h3>
                     <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3 h-3 absolute left-2 top-1.5 text-slate-400"></i>
+                            <input type="text" id="searchDetalle" placeholder="Buscar..." onkeyup="App.filterGrid('detalle', this.value)" class="pl-6 pr-2 py-0.5 text-[10px] bg-slate-900/50 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:bg-slate-900/80 w-32 transition-all focus:w-48">
+                        </div>
                         <span id="detalleBadge" class="px-2 py-0.5 bg-slate-900/50 text-white border border-slate-600 rounded text-[9px] font-black hidden tracking-wider shadow-inner">0 REG</span>
                         <button id="btnClearDetalle" onclick="App.clearSelection()" class="hidden text-rose-400 hover:text-rose-300 transition-colors focus:outline-none" title="Limpiar selección y restaurar vista">
                             <i data-lucide="x-circle" class="w-4 h-4"></i>
@@ -247,6 +264,7 @@
                         <thead class="text-slate-600 bg-slate-100 uppercase text-[9px] font-black tracking-widest border-b-2 border-slate-200">
                             <tr>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Contrato</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Contrato Comp.</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">F. Oper.</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Producto</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Tipo</th>
@@ -257,12 +275,13 @@
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Comprador</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Desde</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1">Hasta</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1 text-right">Tn Contratadas</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1 text-right">Tn Faltantes</th>
                                 <th class="sticky-top bg-slate-100 px-2 py-1 border-r-0">Destino / Zona</th>
                             </tr>
                         </thead>
                         <tbody id="detalleGrid" class="divide-y divide-slate-100 text-[10px]">
-                            <tr><td colspan="13" class="px-4 py-3 text-center text-slate-400 italic font-semibold text-xs">No hay celdas seleccionadas</td></tr>
+                            <tr><td colspan="15" class="px-4 py-3 text-center text-slate-400 italic font-semibold text-xs">No hay celdas seleccionadas</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -284,7 +303,7 @@
                     <div class="text-xs text-blue-900">
                         <strong class="font-black flex items-center gap-1.5 mb-1"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-blue-600"></i> Importación Masiva Excel</strong>
                         Sube tu archivo "DESTINOS ZONAS.xlsx" para actualizar la base de datos.<br>
-                        <span class="text-[10px] text-blue-700 opacity-80 font-bold uppercase tracking-wide">Requiere columnas: "DESCRIPCION", "ZONA" y "SUB ZONA" (opcional).</span>
+                        <span class="text-[10px] text-blue-700 opacity-80 font-bold uppercase tracking-wide">Requiere columnas: "ID DESTINO", "DESCRIPCION", "ZONA" y "SUB ZONA" (opcional).</span>
                     </div>
                     <div>
                         <input type="file" id="zoneUpload" accept=".xlsx, .xls, .csv" class="hidden" onchange="App.handleFileUpload(event, 'zones')">
@@ -295,6 +314,10 @@
                 </div>
 
                 <div class="flex gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200 items-end">
+                    <div class="w-24">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">ID Destino</label>
+                        <input type="number" id="newIdDestino" placeholder="Ej: 1024" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none font-semibold">
+                    </div>
                     <div class="flex-1">
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Destino</label>
                         <input type="text" id="newDestino" placeholder="Ej: ROSARIO SUR" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none uppercase font-semibold">
@@ -307,8 +330,9 @@
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sub Zona</label>
                         <input type="text" id="newSubZona" placeholder="Ej: ZONA ROSARIO SUR" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none uppercase font-semibold">
                     </div>
-                    <div>
-                        <button onclick="App.addManualZone()" class="px-5 py-2 h-[34px] bg-slate-800 text-white rounded-md text-xs font-bold hover:bg-slate-900 shadow-sm transition">Agregar</button>
+                    <div class="flex gap-2">
+                        <button id="btnGuardarZona" onclick="App.addManualZone()" class="px-5 py-2 h-[34px] bg-slate-800 text-white rounded-md text-xs font-bold hover:bg-slate-900 shadow-sm transition">Agregar</button>
+                        <button id="btnCancelarZona" onclick="App.cancelEditZone()" class="hidden px-4 py-2 h-[34px] bg-slate-200 text-slate-600 rounded-md text-xs font-bold hover:bg-slate-300 shadow-sm transition">Cancelar</button>
                     </div>
                 </div>
 
@@ -324,6 +348,7 @@
                         <table class="w-full text-xs text-left">
                             <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10 text-[9px] uppercase tracking-wider font-black">
                                 <tr>
+                                    <th class="px-4 py-2 border-b border-slate-200 w-20">ID</th>
                                     <th class="px-4 py-2 border-b border-slate-200">Destino (Descripción)</th>
                                     <th class="px-4 py-2 border-b border-slate-200">Zona Comercial</th>
                                     <th class="px-4 py-2 border-b border-slate-200">Sub Zona</th>
@@ -369,6 +394,7 @@
                 destinosSeleccionados: new Set(),
                 celdaActiva: null,
                 zonasDB: {},
+                editandoZona: null,
                 unmappedDestinos: new Set()
             },
 
@@ -411,6 +437,7 @@
                     const db = {};
                     (zonas || []).forEach(z => {
                         db[this.normalizeKey(z.descripcion)] = {
+                            id: z.id_destino,
                             zona: this.normalizeKey(z.zona),
                             subZona: this.normalizeKey(z.sub_zona || z.zona)
                         };
@@ -471,6 +498,9 @@
                         tipoContrato: this.cleanString(r.tipo_contrato),
                         precio: this.cleanString(r.precio) || '-',
                         cosecha: this.cleanString(r.cosecha),
+                        nroComprador: this.cleanString(r.nro_comprador),
+                        kgPactados: Number(r.kg_pactados) || 0,
+                        tnContratadas: (Number(r.kg_pactados) || 0) / 1000,
                         mesMatriz: isoHasta ? String(isoHasta).substring(0, 7) : 'S/F'
                     });
                 });
@@ -525,7 +555,7 @@
                 lucide.createIcons();
 
                 const rows = document.querySelectorAll('.data-row');
-                if (mode === 'detail' && this.state.celdaActiva) {
+                if (mode === 'detail' && this.state.celdaActiva && this.state.celdaActiva.entidad !== '_ALL_') {
                     rows.forEach(r => {
                         const rTipo = r.getAttribute('data-tipo');
                         const rEnt = r.getAttribute('data-entidad');
@@ -582,9 +612,11 @@
             toggleConfigModal: function() {
                 const modal = document.getElementById('configModal');
                 if (modal.classList.contains('hidden')) {
+                    if (this.state.editandoZona) this.cancelEditZone();
                     this.renderZonasTable();
                     modal.classList.remove('hidden');
                 } else {
+                    if (this.state.editandoZona) this.cancelEditZone();
                     modal.classList.add('hidden');
                     if(this.data.length > 0) this.reprocessZonas();
                 }
@@ -598,9 +630,10 @@
                     if(!this.state.zonasDB[d]) { 
                         tbody.innerHTML += `
                             <tr class="bg-amber-50">
+                                <td class="px-4 py-2 text-amber-400 italic text-[10px]">—</td>
                                 <td class="px-4 py-2 font-bold text-amber-900">${d} <span class="text-[8px] ml-1.5 bg-amber-200 px-1.5 py-0.5 rounded uppercase font-black text-amber-800">Falta</span></td>
                                 <td colspan="2" class="px-4 py-2 text-red-600 font-bold italic text-[10px]">Sin asignación (Falta Zona/Sub Zona)</td>
-                                <td class="px-4 py-2 text-center"><button onclick="document.getElementById('newDestino').value='${d}'; document.getElementById('newZona').focus()" class="text-[10px] font-black text-blue-600 hover:text-blue-800 hover:underline">Resolver</button></td>
+                                <td class="px-4 py-2 text-center"><button onclick="document.getElementById('newDestino').value='${d}'; document.getElementById('newIdDestino').focus()" class="text-[10px] font-black text-blue-600 hover:text-blue-800 hover:underline">Resolver</button></td>
                             </tr>
                         `;
                     }
@@ -608,43 +641,106 @@
 
                 Object.keys(this.state.zonasDB).sort().forEach(k => {
                     const zData = this.state.zonasDB[k];
+                    const idTxt = (zData.id !== undefined && zData.id !== null) ? zData.id : '—';
+                    const safeK = String(k).replace(/'/g, "\\'");
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-1.5 font-black text-slate-800">${idTxt}</td>
                             <td class="px-4 py-1.5 font-bold text-slate-700">${k}</td>
                             <td class="px-4 py-1.5 text-slate-500 font-bold">${zData.zona}</td>
                             <td class="px-4 py-1.5 text-emerald-600 font-semibold">${zData.subZona}</td>
-                            <td class="px-4 py-1.5 text-center"><button onclick="App.deleteZone('${k}')" class="text-slate-400 hover:text-red-600 bg-white border border-slate-200 p-1 rounded shadow-sm hover:border-red-200 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+                            <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                                <button onclick="App.editZone('${safeK}')" class="text-slate-400 hover:text-blue-600 bg-white border border-slate-200 p-1 rounded shadow-sm hover:border-blue-200 transition mr-1" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="App.deleteZone('${safeK}')" class="text-slate-400 hover:text-red-600 bg-white border border-slate-200 p-1 rounded shadow-sm hover:border-red-200 transition" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </td>
                         </tr>
                     `;
                 });
                 lucide.createIcons();
             },
 
+            editZone: function(key) {
+                const z = this.state.zonasDB[key];
+                if (!z) return;
+                document.getElementById('newIdDestino').value = (z.id ?? '');
+                document.getElementById('newDestino').value = key;
+                document.getElementById('newZona').value = z.zona || '';
+                document.getElementById('newSubZona').value = z.subZona || '';
+                // Guarda referencia al registro original (clave = descripción, id original)
+                this.state.editandoZona = { descOrig: key, idOrig: (z.id ?? null) };
+                document.getElementById('btnGuardarZona').innerText = 'Guardar cambios';
+                document.getElementById('btnGuardarZona').classList.remove('bg-slate-800', 'hover:bg-slate-900');
+                document.getElementById('btnGuardarZona').classList.add('bg-blue-600', 'hover:bg-blue-700');
+                document.getElementById('btnCancelarZona').classList.remove('hidden');
+                document.getElementById('newIdDestino').focus();
+            },
+
+            cancelEditZone: function() {
+                this.state.editandoZona = null;
+                document.getElementById('newIdDestino').value = '';
+                document.getElementById('newDestino').value = '';
+                document.getElementById('newZona').value = '';
+                document.getElementById('newSubZona').value = '';
+                document.getElementById('btnGuardarZona').innerText = 'Agregar';
+                document.getElementById('btnGuardarZona').classList.add('bg-slate-800', 'hover:bg-slate-900');
+                document.getElementById('btnGuardarZona').classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                document.getElementById('btnCancelarZona').classList.add('hidden');
+            },
+
             addManualZone: async function() {
+                const idRaw = document.getElementById('newIdDestino').value.trim();
                 const dest = this.normalizeKey(document.getElementById('newDestino').value);
                 const zona = this.normalizeKey(document.getElementById('newZona').value);
                 const subZona = this.normalizeKey(document.getElementById('newSubZona').value) || zona;
-                if(!dest || !zona) { alert("Completa al menos el Destino y la Zona Comercial."); return; }
+
+                if(!idRaw || !dest || !zona) { alert("Completá el ID Destino, el Destino y la Zona Comercial."); return; }
+                if(!/^\d+$/.test(idRaw)) { alert("El ID Destino debe ser un número."); return; }
+                const id = parseInt(idRaw, 10);
+
+                const edit = this.state.editandoZona; // null si es alta
+                const descOrig = edit ? edit.descOrig : null;
+                const idOrig = edit ? edit.idOrig : null;
+
+                // Validación local: ID ya usado por OTRO destino (distinto al que se edita)
+                const idEnUso = Object.keys(this.state.zonasDB).find(k =>
+                    this.state.zonasDB[k].id === id && k !== descOrig);
+                if (idEnUso) { alert(`El ID ${id} ya está asignado al destino "${idEnUso}". Usá otro ID.`); return; }
+
+                // Validación local: descripción ya usada por OTRO registro
+                const descEnUso = Object.keys(this.state.zonasDB).find(k =>
+                    k === dest && k !== descOrig);
+                if (descEnUso) { alert(`La descripción "${dest}" ya existe con otro ID. Usá otra o editá ese registro.`); return; }
 
                 const clave = this.pedirClave();
                 if (!clave) return;
 
-                const { error } = await this.sb.rpc('guardar_zona', { p_clave: clave, p_desc: dest, p_zona: zona, p_subzona: subZona });
-                if (error) { alert("No se pudo guardar (¿clave incorrecta?): " + error.message); return; }
+                const { error } = await this.sb.rpc('guardar_zona', {
+                    p_clave: clave, p_id: id, p_desc: dest, p_zona: zona, p_subzona: subZona, p_id_orig: idOrig
+                });
+                if (error) {
+                    if (String(error.message).includes('ID_DUPLICADO')) { alert(`El ID ${id} ya existe en la base. Usá otro.`); return; }
+                    if (String(error.message).includes('DESC_DUPLICADA')) { alert(`La descripción "${dest}" ya existe con otro ID. Editá ese registro o usá otra descripción.`); return; }
+                    alert("No se pudo guardar (¿clave incorrecta?): " + error.message); return;
+                }
 
-                this.state.zonasDB[dest] = { zona, subZona };
+                // Si se editó y cambió la descripción, eliminar la clave vieja del diccionario
+                if (descOrig && descOrig !== dest) delete this.state.zonasDB[descOrig];
+                this.state.zonasDB[dest] = { id, zona, subZona };
                 this.state.unmappedDestinos.delete(dest);
-                document.getElementById('newDestino').value = ''; document.getElementById('newZona').value = ''; document.getElementById('newSubZona').value = '';
+
+                this.cancelEditZone(); // limpia formulario y sale del modo edición
                 this.saveZonasDB();
                 this.checkUnmappedAlert();
                 this.refreshVista();
             },
 
             deleteZone: async function(key) {
-                if(!confirm(`¿Eliminar la asociación para "${key}"?`)) return;
+                const zData = this.state.zonasDB[key];
+                if (!zData) return;
+                if(!confirm(`¿Eliminar la asociación para "${key}" (ID ${zData.id})?`)) return;
                 const clave = this.pedirClave();
                 if (!clave) return;
-                const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_desc: key });
+                const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_id: zData.id });
                 if (error) { alert("No se pudo eliminar (¿clave incorrecta?): " + error.message); return; }
                 delete this.state.zonasDB[key];
                 this.saveZonasDB();
@@ -666,14 +762,14 @@
                 const keys = Object.keys(this.state.zonasDB).sort();
                 if(keys.length === 0) { alert("El diccionario está vacío. No hay nada para exportar."); return; }
 
-                const aoa = [['DESCRIPCION', 'ZONA', 'SUB ZONA']];
+                const aoa = [['ID DESTINO', 'DESCRIPCION', 'ZONA', 'SUB ZONA']];
                 keys.forEach(k => {
                     const z = this.state.zonasDB[k];
-                    aoa.push([k, z.zona || '', z.subZona || '']);
+                    aoa.push([z.id ?? '', k, z.zona || '', z.subZona || '']);
                 });
 
                 const ws = XLSX.utils.aoa_to_sheet(aoa);
-                ws['!cols'] = [{wch: 40}, {wch: 25}, {wch: 25}];
+                ws['!cols'] = [{wch: 12}, {wch: 40}, {wch: 25}, {wch: 25}];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'DESTINOS ZONAS');
 
@@ -854,26 +950,43 @@
                 const idxDesc = getIdx('DESCRIPCION'), idxZona = getIdx('ZONA');
                 let idxSubZona = getIdx('SUBZONA');
                 if (idxSubZona === -1) idxSubZona = headers.findIndex(h => h.includes('SUB') && h.includes('ZONA'));
+                // ID DESTINO: busca encabezado que contenga "ID"
+                let idxId = headers.findIndex(h => h.includes('IDDESTINO'));
+                if (idxId === -1) idxId = headers.findIndex(h => h === 'ID' || h.startsWith('ID'));
 
                 if(idxDesc === -1 || idxZona === -1) { alert("Falta columna DESCRIPCION o ZONA."); return; }
+                if(idxId === -1) { alert("Falta la columna 'ID DESTINO' en el Excel. Es obligatoria."); return; }
 
                 const clave = this.pedirClave();
                 if (!clave) return;
 
                 const filas = [];
                 const localBatch = {};
+                const idsVistos = new Set();
+                const errores = [];
                 for(let i = headerIdx + 1; i < rows.length; i++) {
                     const row = rows[i];
                     if(!row || !row[idxDesc]) continue;
                     const desc = this.normalizeKey(row[idxDesc]);
                     if(!desc) continue;
+
+                    const idRaw = String(row[idxId] ?? '').trim();
+                    if(!idRaw || !/^\d+$/.test(idRaw)) { errores.push(`Fila ${i+1}: ID inválido o vacío ("${idRaw}") para "${desc}".`); continue; }
+                    const id = parseInt(idRaw, 10);
+                    if(idsVistos.has(id)) { errores.push(`Fila ${i+1}: ID ${id} repetido dentro del archivo.`); continue; }
+                    idsVistos.add(id);
+
                     const zona = this.normalizeKey(row[idxZona] || 'OTROS');
                     const subZona = (idxSubZona !== -1 && row[idxSubZona]) ? this.normalizeKey(row[idxSubZona]) : zona;
-                    filas.push({ descripcion: desc, zona: zona, sub_zona: subZona });
-                    localBatch[desc] = { zona, subZona };
+                    filas.push({ id_destino: id, descripcion: desc, zona: zona, sub_zona: subZona });
+                    localBatch[desc] = { id, zona, subZona };
                 }
 
-                if (filas.length === 0) { alert("No se encontraron filas válidas."); return; }
+                if (errores.length > 0) {
+                    const muestra = errores.slice(0, 10).join('\n');
+                    if(!confirm(`Se detectaron ${errores.length} problema(s):\n\n${muestra}${errores.length>10?'\n...':''}\n\n¿Importar igual las ${filas.length} filas válidas y omitir las problemáticas?`)) return;
+                }
+                if (filas.length === 0) { alert("No se encontraron filas válidas para importar."); return; }
 
                 const { data, error } = await this.sb.rpc('importar_zonas', { p_clave: clave, p_filas: filas });
                 if (error) { alert("No se pudo importar el diccionario (¿clave incorrecta?): " + error.message); return; }
@@ -910,7 +1023,8 @@
                         comprador: getIdx(['rsocialcomprador', 'comprador']), repreVend: getIdx(['reprevendedor']), repre: getIdx(['representante']),
                         fDesde: getIdx(['fechadeentregadesde', 'entregadesde']), fHasta: getIdx(['fechadeentregahasta', 'entregahasta']),
                         kgFalta: getIdx(['kgfaltaentregar', 'kilos pendientes', 'faltaentregar']), destino: getIdx(['destino']),
-                        tipo: getIdx(['desctipoctrat', 'tipocontrato']), cosecha: getIdx(['cosechaasstring', 'cosecha']), precio: getIdx(['precio']) 
+                        tipo: getIdx(['desctipoctrat', 'tipocontrato']), cosecha: getIdx(['cosechaasstring', 'cosecha']), precio: getIdx(['precio']),
+                        nrocomp: getIdx(['nrocomp']), kilosPactados: getIdx(['kilospactados'])
                     };
 
                     const parsedData = [];
@@ -947,6 +1061,9 @@
                             tipoContrato: this.cleanString(getVal(map.tipo)),
                             precio: map.precio !== -1 ? this.formatPrecio(row[map.precio]) : '-',
                             cosecha: this.cleanString(getVal(map.cosecha)),
+                            nroComprador: this.cleanString(getVal(map.nrocomp)),
+                            kgPactados: this.parseCustomNumber(getVal(map.kilosPactados)),
+                            tnContratadas: this.parseCustomNumber(getVal(map.kilosPactados)) / 1000,
                             mesMatriz: isoHasta ? isoHasta.substring(0, 7) : 'S/F'
                         });
                     }
@@ -985,7 +1102,9 @@
                     destino_original: d.destinoOriginal,
                     tipo_contrato: d.tipoContrato,
                     precio: String(d.precio || ''),
-                    cosecha: d.cosecha
+                    cosecha: d.cosecha,
+                    nro_comprador: d.nroComprador || '',
+                    kg_pactados: d.kgPactados || 0
                 }));
 
                 this.showCloudStatus(`Subiendo ${filas.length} contratos a la nube...`, 'loading');
@@ -1071,7 +1190,20 @@
                     selTo.innerHTML += `<option value="${m}">${text}</option>`;
                 });
                 if(mesesUnicos.length > 0) {
-                    selFrom.value = mesesUnicos[0]; selTo.value = mesesUnicos[mesesUnicos.length - 1];
+                    // Rango por defecto: desde Nov 2025 hasta Oct 2026 (omite contratos viejos por defecto)
+                    const DEF_DESDE = '2025-11-01';
+                    const DEF_HASTA = '2026-10-15';
+                    // "desde" = primera quincena disponible >= Nov 2025 (si no hay, la primera de todas)
+                    const desdeDefault = mesesUnicos.find(m => m >= DEF_DESDE) || mesesUnicos[0];
+                    // "hasta" = última quincena disponible <= Oct 2026 (si no hay, la última de todas)
+                    let hastaDefault = mesesUnicos[mesesUnicos.length - 1];
+                    for (let i = mesesUnicos.length - 1; i >= 0; i--) {
+                        if (mesesUnicos[i] <= DEF_HASTA) { hastaDefault = mesesUnicos[i]; break; }
+                    }
+                    // Garantizar que hasta no sea anterior a desde
+                    if (hastaDefault < desdeDefault) hastaDefault = mesesUnicos[mesesUnicos.length - 1];
+                    selFrom.value = desdeDefault;
+                    selTo.value = hastaDefault;
                 }
 
                 const zonaUnicas = [...new Set(this.data.map(d => d.zona))].filter(z => z && z.toUpperCase() !== 'SIN ASIGNAR').sort((a, b) => {
@@ -1255,16 +1387,20 @@
                         const idStr = `cell-VENTA-${safeId(rowName)}-${m}`;
                         htmlVenta += `<td id="${idStr}" class="px-2 py-1 border-b border-r border-slate-100 min-w-[85px] max-w-[85px] w-[85px] ${bgClass} ${tdClass}" onclick="App.selectCell('VENTA', '${safeStr(rowName)}', '${m}', '${idStr}')">${val > 0 ? this.formatNumber(val) : '-'}</td>`;
                     });
-                    htmlVenta += `<td class="px-2 py-1 font-black bg-blue-50/60 text-blue-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(rowTotal)}</td></tr>`;
+                    const idStrTotalV = `cell-VENTA-${safeId(rowName)}-_ALL_`;
+                    htmlVenta += `<td id="${idStrTotalV}" class="px-2 py-1 font-black bg-blue-50/60 text-blue-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px] ${rowTotal > 0 ? 'cell-hover cursor-pointer' : ''}" onclick="App.selectCell('VENTA', '${safeStr(rowName)}', '_ALL_', '${idStrTotalV}')">${this.formatNumber(rowTotal)}</td></tr>`;
                 });
                 if(dataVentas.rows.length === 0) htmlVenta += `<tr><td colspan="${mesesArr.length + 2}" class="px-4 py-3 text-center text-slate-400 italic">Sin datos</td></tr>`;
                 htmlVenta += `</tbody>
                               <tfoot class="text-blue-900 font-black text-[10px] uppercase tracking-wide"><tr>
                                 <td class="px-2 py-1 bg-blue-200 sticky-bottom-left text-left shadow-[1px_-1px_0_#93c5fd] z-30 min-w-[200px] max-w-[200px] w-[200px]">TOTAL</td>`;
                 mesesArr.forEach(m => {
-                    htmlVenta += `<td class="px-2 py-1 border-r border-t-2 border-blue-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${m === sortMonth ? 'bg-blue-300 text-blue-950 border-blue-400' : 'bg-blue-200 border-blue-300'}">${dataVentas.colTotals[m] > 0 ? this.formatNumber(dataVentas.colTotals[m]) : '-'}</td>`;
+                    const ct = dataVentas.colTotals[m];
+                    const idStrColV = `cell-VENTA-_ALL_-${m}`;
+                    htmlVenta += `<td id="${idStrColV}" class="px-2 py-1 border-r border-t-2 border-blue-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${ct > 0 ? 'cursor-pointer hover:brightness-95' : ''} ${m === sortMonth ? 'bg-blue-300 text-blue-950 border-blue-400' : 'bg-blue-200 border-blue-300'}" onclick="App.selectCell('VENTA', '_ALL_', '${m}', '${idStrColV}')">${ct > 0 ? this.formatNumber(ct) : '-'}</td>`;
                 });
-                htmlVenta += `<td class="px-2 py-1 bg-blue-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#3b82f6] border-t-2 border-blue-700 min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(dataVentas.grandTotal)}</td></tr></tfoot></table>`;
+                const idStrGTV = `cell-VENTA-_ALL_-_ALL_`;
+                htmlVenta += `<td id="${idStrGTV}" class="px-2 py-1 bg-blue-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#3b82f6] border-t-2 border-blue-700 min-w-[90px] max-w-[90px] w-[90px] ${dataVentas.grandTotal > 0 ? 'cursor-pointer hover:bg-blue-600' : ''}" onclick="App.selectCell('VENTA', '_ALL_', '_ALL_', '${idStrGTV}')">${this.formatNumber(dataVentas.grandTotal)}</td></tr></tfoot></table>`;
                 document.getElementById('panelVentaContent').innerHTML = htmlVenta;
 
                 // --- TABLA BALANCE (A RECIBIR - A ENTREGAR) ---
@@ -1312,19 +1448,48 @@
                         const idStr = `cell-COMPRA-${safeId(rowName)}-${m}`;
                         htmlCompra += `<td id="${idStr}" class="px-2 py-1 border-b border-r border-slate-100 min-w-[85px] max-w-[85px] w-[85px] ${bgClass} ${tdClass}" onclick="App.selectCell('COMPRA', '${safeStr(rowName)}', '${m}', '${idStr}')">${val > 0 ? this.formatNumber(val) : '-'}</td>`;
                     });
-                    htmlCompra += `<td class="px-2 py-1 font-black bg-emerald-50/60 text-emerald-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(rowTotal)}</td></tr>`;
+                    const idStrTotalC = `cell-COMPRA-${safeId(rowName)}-_ALL_`;
+                    htmlCompra += `<td id="${idStrTotalC}" class="px-2 py-1 font-black bg-emerald-50/60 text-emerald-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px] ${rowTotal > 0 ? 'cell-hover cursor-pointer' : ''}" onclick="App.selectCell('COMPRA', '${safeStr(rowName)}', '_ALL_', '${idStrTotalC}')">${this.formatNumber(rowTotal)}</td></tr>`;
                 });
                 if(dataCompras.rows.length === 0) htmlCompra += `<tr><td colspan="${mesesArr.length + 2}" class="px-4 py-3 text-center text-slate-400 italic">Sin datos</td></tr>`;
                 htmlCompra += `</tbody>
                                <tfoot class="text-emerald-900 font-black text-[10px] uppercase tracking-wide"><tr>
                                 <td class="px-2 py-1 bg-emerald-200 sticky-bottom-left text-left shadow-[1px_-1px_0_#6ee7b7] z-30 min-w-[200px] max-w-[200px] w-[200px]">TOTAL</td>`;
                 mesesArr.forEach(m => {
-                    htmlCompra += `<td class="px-2 py-1 border-r border-t-2 border-emerald-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${m === sortMonth ? 'bg-emerald-300 text-emerald-950 border-emerald-400' : 'bg-emerald-200 border-emerald-300'}">${dataCompras.colTotals[m] > 0 ? this.formatNumber(dataCompras.colTotals[m]) : '-'}</td>`;
+                    const ct = dataCompras.colTotals[m];
+                    const idStrColC = `cell-COMPRA-_ALL_-${m}`;
+                    htmlCompra += `<td id="${idStrColC}" class="px-2 py-1 border-r border-t-2 border-emerald-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${ct > 0 ? 'cursor-pointer hover:brightness-95' : ''} ${m === sortMonth ? 'bg-emerald-300 text-emerald-950 border-emerald-400' : 'bg-emerald-200 border-emerald-300'}" onclick="App.selectCell('COMPRA', '_ALL_', '${m}', '${idStrColC}')">${ct > 0 ? this.formatNumber(ct) : '-'}</td>`;
                 });
-                htmlCompra += `<td class="px-2 py-1 bg-emerald-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#10b981] border-t-2 border-emerald-700 min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(dataCompras.grandTotal)}</td></tr></tfoot></table>`;
+                const idStrGTC = `cell-COMPRA-_ALL_-_ALL_`;
+                htmlCompra += `<td id="${idStrGTC}" class="px-2 py-1 bg-emerald-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#10b981] border-t-2 border-emerald-700 min-w-[90px] max-w-[90px] w-[90px] ${dataCompras.grandTotal > 0 ? 'cursor-pointer hover:bg-emerald-600' : ''}" onclick="App.selectCell('COMPRA', '_ALL_', '_ALL_', '${idStrGTC}')">${this.formatNumber(dataCompras.grandTotal)}</td></tr></tfoot></table>`;
                 document.getElementById('panelCompraContent').innerHTML = htmlCompra;
 
                 lucide.createIcons(); 
+            },
+
+            // Búsqueda dinámica dentro de cada grilla (filtra filas por coincidencia de texto)
+            filterGrid: function(grid, term) {
+                const containerId = grid === 'venta' ? 'panelVentaContent'
+                                  : grid === 'compra' ? 'panelCompraContent'
+                                  : 'detalleGrid';
+                const lower = String(term).toLowerCase().trim();
+
+                if (grid === 'detalle') {
+                    const rows = document.querySelectorAll('#detalleGrid tr');
+                    rows.forEach(r => {
+                        if (r.querySelector('td[colspan]')) return; // fila de "sin datos"
+                        r.style.display = !lower || r.innerText.toLowerCase().includes(lower) ? '' : 'none';
+                    });
+                    return;
+                }
+
+                // Para venta/compra: filtra filas del tbody (data-row), respeta header y tfoot
+                const cont = document.getElementById(containerId);
+                if (!cont) return;
+                const rows = cont.querySelectorAll('tbody tr.data-row');
+                rows.forEach(r => {
+                    r.style.display = !lower || r.innerText.toLowerCase().includes(lower) ? '' : 'none';
+                });
             },
 
             clearSelection: function() {
@@ -1332,6 +1497,8 @@
                 this.state.celdaActiva = null;
                 document.getElementById('detalleTitulo').innerHTML = `- Selecciona un volumen arriba`;
                 document.getElementById('btnClearDetalle').classList.add('hidden');
+                const sd = document.getElementById('searchDetalle');
+                if (sd) sd.value = '';
                 this.renderDetalleGrid();
                 this.setLayout('default');
             },
@@ -1344,7 +1511,7 @@
 
                 document.querySelectorAll('.cell-selected').forEach(el => el.classList.remove('cell-selected'));
                 this.state.celdaActiva = { tipo, entidad, mes, elementId };
-                
+
                 this.setLayout('detail');
 
                 const cell = document.getElementById(elementId);
@@ -1352,9 +1519,15 @@
 
                 const tituloEntidad = tipo === 'VENTA' ? 'Comprador' : 'Repre/Vendedor';
                 const colorMes = tipo === 'VENTA' ? 'text-blue-600' : 'text-emerald-400';
-                document.getElementById('detalleTitulo').innerHTML = `- Filtrado: <b>${tituloEntidad} ${entidad}</b> | Rango: <b class="${colorMes}">${this.getDynamicMonthLabel(mes)}</b>`;
+                const entTxt = (entidad === '_ALL_') ? `<b>Todos los ${tipo === 'VENTA' ? 'compradores' : 'repre/vendedores'}</b>` : `<b>${tituloEntidad} ${entidad}</b>`;
+                const mesTxt = (mes === '_ALL_') ? `<b class="${colorMes}">Todos los meses</b>` : `<b class="${colorMes}">${this.getDynamicMonthLabel(mes)}</b>`;
+                document.getElementById('detalleTitulo').innerHTML = `- Filtrado: ${entTxt} | Rango: ${mesTxt}`;
                 document.getElementById('btnClearDetalle').classList.remove('hidden');
-                
+
+                // Limpia el buscador del detalle al cambiar de selección
+                const sd = document.getElementById('searchDetalle');
+                if (sd) sd.value = '';
+
                 this.renderDetalleGrid();
             },
 
@@ -1363,7 +1536,7 @@
                 const badge = document.getElementById('detalleBadge');
                 
                 if(!this.state.celdaActiva) {
-                    tbody.innerHTML = `<tr><td colspan="13" class="px-4 py-8 text-center text-slate-400 italic font-semibold text-[11px]">Selecciona un volumen en las tablas superiores para ver los contratos</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="15" class="px-4 py-8 text-center text-slate-400 italic font-semibold text-[11px]">Selecciona un volumen en las tablas superiores para ver los contratos</td></tr>`;
                     badge.classList.add('hidden');
                     return;
                 }
@@ -1372,14 +1545,14 @@
                 const myName = this.config.empresaNombre;
 
                 const detalleData = this.filteredData.filter(d => {
-                    if(d.mesMatriz !== mes) return false; 
-                    const cleanEnt = String(entidad).replace(/['"\\]/g, ''); 
-                    
+                    if(mes !== '_ALL_' && d.mesMatriz !== mes) return false;
+                    const cleanEnt = String(entidad).replace(/['"\\]/g, '');
+
                     if(tipo === 'VENTA') {
-                        const isEntidad = String(d.comprador).replace(/['"\\]/g, '') === cleanEnt;
+                        const isEntidad = (entidad === '_ALL_') || String(d.comprador).replace(/['"\\]/g, '') === cleanEnt;
                         return isEntidad && d.vendedor && String(d.vendedor).toLowerCase().includes(myName);
                     } else {
-                        const isEntidad = String(d.representanteVendedor).replace(/['"\\]/g, '') === cleanEnt;
+                        const isEntidad = (entidad === '_ALL_') || String(d.representanteVendedor).replace(/['"\\]/g, '') === cleanEnt;
                         return isEntidad && d.comprador && String(d.comprador).toLowerCase().includes(myName);
                     }
                 });
@@ -1388,7 +1561,7 @@
                 badge.classList.remove('hidden');
 
                 if(detalleData.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="13" class="px-4 py-8 text-center text-slate-400 text-[11px]">No se encontraron registros en la tabla.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="15" class="px-4 py-8 text-center text-slate-400 text-[11px]">No se encontraron registros en la tabla.</td></tr>`;
                     return;
                 }
 
@@ -1404,6 +1577,7 @@
                     html += `
                         <tr class="${rowBg} transition-colors cursor-default border-b">
                             <td class="px-2 py-1 font-bold text-slate-700 border-l border-transparent">${row.contrato || '-'}</td>
+                            <td class="px-2 py-1 font-semibold text-slate-500">${row.nroComprador || '-'}</td>
                             <td class="px-2 py-1 text-slate-500">${row.fechaOperacion || '-'}</td>
                             <td class="px-2 py-1 font-black text-slate-800">${row.producto || '-'}</td>
                             <td class="px-2 py-1">${tipoDisplay}</td>
@@ -1414,6 +1588,7 @@
                             <td class="px-2 py-1 text-slate-600 font-medium max-w-[140px] truncate" title="${row.comprador}">${row.comprador || '-'}</td>
                             <td class="px-2 py-1 text-slate-500">${row.fechaEntregaDesde || '-'}</td>
                             <td class="px-2 py-1 font-semibold text-slate-800">${row.fechaEntregaHasta || '-'}</td>
+                            <td class="px-2 py-1 font-bold text-right text-slate-500">${row.tnContratadas ? this.formatNumber(row.tnContratadas) : '-'}</td>
                             <td class="px-2 py-1 font-black text-right ${textColor}">${this.formatNumber(row.tnFaltantes)}</td>
                             <td class="px-2 py-1 text-slate-700 border-r-0 whitespace-nowrap min-w-max pr-5" title="${row.destino} | SubZona: ${row.subZona} | Zona: ${row.zona}">
                                 ${row.destino || '-'} <span class="text-[8px] ml-1.5 px-1.5 py-0.5 bg-slate-200 text-slate-800 font-black rounded uppercase tracking-wider border border-slate-300 shadow-sm" title="Sub Zona Comercial">${row.subZona}</span>
