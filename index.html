@@ -63,6 +63,7 @@
         th.sticky-top-left { position: sticky; top: 0; left: 0; z-index: 30; border-top: 1px solid #e2e8f0; }
         tfoot th, tfoot td { position: sticky; bottom: 0; z-index: 20; border-top: 2px solid #94a3b8; }
         tfoot th.sticky-bottom-left { position: sticky; bottom: 0; left: 0; z-index: 30; }
+        .sort-arrow { font-size: 8px; display: inline-block; width: 8px; }
     </style>
 </head>
 <body class="text-slate-800 font-sans h-screen flex flex-col antialiased bg-slate-100 overflow-hidden">
@@ -263,21 +264,21 @@
                     <table class="w-full text-left whitespace-nowrap">
                         <thead class="text-slate-600 bg-slate-100 uppercase text-[9px] font-black tracking-widest border-b-2 border-slate-200">
                             <tr>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Contrato</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Contrato Comp.</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">F. Oper.</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Producto</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Tipo</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Precio</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Cosecha</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Representante</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Vendedor</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Comprador</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Desde</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1">Hasta</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1 text-right">Tn Contratadas</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1 text-right">Tn Faltantes</th>
-                                <th class="sticky-top bg-slate-100 px-2 py-1 border-r-0">Destino / Zona</th>
+                                <th onclick="App.sortDetalle('contrato','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="contrato">Contrato <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('nroComprador','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="nroComprador">Contrato Comp. <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('fechaOperacion','date')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="fechaOperacion">F. Oper. <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('producto','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="producto">Producto <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('tipoContrato','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="tipoContrato">Tipo <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('precio','num')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="precio">Precio <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('cosecha','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="cosecha">Cosecha <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('representanteVendedor','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="representanteVendedor">Representante <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('vendedor','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="vendedor">Vendedor <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('comprador','text')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="comprador">Comprador <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('fechaEntregaDesde_ISO','date')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="fechaEntregaDesde_ISO">Desde <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('fechaEntregaHasta_ISO','date')" class="sticky-top bg-slate-100 px-2 py-1 cursor-pointer hover:bg-slate-200 select-none" data-sort="fechaEntregaHasta_ISO">Hasta <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('tnContratadas','num')" class="sticky-top bg-slate-100 px-2 py-1 text-right cursor-pointer hover:bg-slate-200 select-none" data-sort="tnContratadas">Tn Contratadas <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('tnFaltantes','num')" class="sticky-top bg-slate-100 px-2 py-1 text-right cursor-pointer hover:bg-slate-200 select-none" data-sort="tnFaltantes">Tn Faltantes <span class="sort-arrow"></span></th>
+                                <th onclick="App.sortDetalle('destino','text')" class="sticky-top bg-slate-100 px-2 py-1 border-r-0 cursor-pointer hover:bg-slate-200 select-none" data-sort="destino">Destino / Zona <span class="sort-arrow"></span></th>
                             </tr>
                         </thead>
                         <tbody id="detalleGrid" class="divide-y divide-slate-100 text-[10px]">
@@ -393,6 +394,7 @@
                 subZonasSeleccionadas: new Set(),
                 destinosSeleccionados: new Set(),
                 celdaActiva: null,
+                detalleSort: { campo: null, dir: 'asc', tipo: 'text' },
                 zonasDB: {},
                 editandoZona: null,
                 unmappedDestinos: new Set()
@@ -1531,6 +1533,35 @@
                 this.renderDetalleGrid();
             },
 
+            sortDetalle: function(campo, tipo) {
+                const s = this.state.detalleSort;
+                if (s.campo === campo) {
+                    s.dir = (s.dir === 'asc') ? 'desc' : 'asc';
+                } else {
+                    s.campo = campo; s.tipo = tipo;
+                    // Por defecto: números y fechas arrancan de mayor a menor; texto de A-Z
+                    s.dir = (tipo === 'num' || tipo === 'date') ? 'desc' : 'asc';
+                }
+                this.updateSortArrows();
+                this.renderDetalleGrid();
+            },
+
+            updateSortArrows: function() {
+                const s = this.state.detalleSort;
+                document.querySelectorAll('#panelDetalle th[data-sort]').forEach(th => {
+                    const arrow = th.querySelector('.sort-arrow');
+                    if (!arrow) return;
+                    if (th.getAttribute('data-sort') === s.campo) {
+                        arrow.textContent = s.dir === 'asc' ? '▲' : '▼';
+                        arrow.classList.add('text-emerald-600');
+                        th.classList.add('text-emerald-700');
+                    } else {
+                        arrow.textContent = '';
+                        th.classList.remove('text-emerald-700');
+                    }
+                });
+            },
+
             renderDetalleGrid: function() {
                 const tbody = document.getElementById('detalleGrid');
                 const badge = document.getElementById('detalleBadge');
@@ -1563,6 +1594,29 @@
                 if(detalleData.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="15" class="px-4 py-8 text-center text-slate-400 text-[11px]">No se encontraron registros en la tabla.</td></tr>`;
                     return;
+                }
+
+                // Aplica ordenamiento si hay una columna activa
+                const s = this.state.detalleSort;
+                if (s.campo) {
+                    const dir = s.dir === 'asc' ? 1 : -1;
+                    detalleData.sort((a, b) => {
+                        let va = a[s.campo], vb = b[s.campo];
+                        if (s.tipo === 'num') {
+                            va = this.parseCustomNumber(va); vb = this.parseCustomNumber(vb);
+                            return (va - vb) * dir;
+                        } else if (s.tipo === 'date') {
+                            // ISO o '-' ; vacíos al final
+                            va = va && va !== '-' ? String(va) : '';
+                            vb = vb && vb !== '-' ? String(vb) : '';
+                            if (!va && !vb) return 0;
+                            if (!va) return 1; if (!vb) return -1;
+                            return va < vb ? -1*dir : va > vb ? 1*dir : 0;
+                        } else {
+                            va = String(va || '').toUpperCase(); vb = String(vb || '').toUpperCase();
+                            return va.localeCompare(vb) * dir;
+                        }
+                    });
                 }
 
                 let html = '';
