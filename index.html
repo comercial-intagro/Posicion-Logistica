@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSICION LOGISTICA ARGENTRADING SA</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (Excel .xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- PapaParse (Para archivos .CSV) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS (backend compartido) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar Interno */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Ocultar scrollbar específicamente para la barra de balance (manteniendo funcionalidad) */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animaciones base de layout con altura mínima muy pequeña para permitir flexbox estricto */
+        .panel-anim { transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1); min-height: 85px; }
+
+        .cell-hover:hover { background-color: #fef08a !important; cursor: pointer; transition: background-color 0.1s ease-in-out; }
+        .cell-selected { background-color: #fef08a !important; font-weight: 900 !important; border: 2px solid #ca8a04 !important; color: #854d0e !important; box-shadow: inset 0 0 0 1px #ca8a04; }
+        
+        /* Dropdown Styles */
+        .custom-dropdown-panel { display: none; opacity: 0; transform: translateY(-10px); transition: all 0.2s; }
+        .custom-dropdown-panel.show { display: block; opacity: 1; transform: translateY(0); }
+        
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        
+        /* Bordes internos */
+        th, td { border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
+        th:first-child, td:first-child { border-left: 1px solid #e2e8f0; }
+        
+        /* Encabezados y Totales Fijos */
+        th.sticky-top { position: sticky; top: 0; z-index: 20; border-top: 1px solid #e2e8f0; }
+        th.sticky-left, td.sticky-left { position: sticky; left: 0; z-index: 10; }
+        th.sticky-top-left { position: sticky; top: 0; left: 0; z-index: 30; border-top: 1px solid #e2e8f0; }
+        tfoot th, tfoot td { position: sticky; bottom: 0; z-index: 20; border-top: 2px solid #94a3b8; }
+        tfoot th.sticky-bottom-left { position: sticky; bottom: 0; left: 0; z-index: 30; }
+    </style>
+</head>
+<body class="text-slate-800 font-sans h-screen flex flex-col antialiased bg-slate-100 overflow-hidden">
+
+    <!-- Header Corporativo (Fijo arriba) -->
+    <header class="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md z-50 relative border-b border-emerald-700">
+        <div class="container mx-auto px-5 py-2.5 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="p-1.5 bg-emerald-600 rounded-lg shadow-inner border border-emerald-500">
+                    <i data-lucide="tractor" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tight text-white leading-none mb-0 drop-shadow-sm">POSICION LOGISTICA ARGENTRADING SA</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="App.toggleConfigModal()" class="px-3 py-1.5 bg-emerald-800/50 hover:bg-emerald-700/80 border border-emerald-600/50 rounded-md text-[11px] font-bold transition flex items-center gap-2 text-emerald-100 shadow-sm" title="Configurar Destinos y Zonas">
+                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> ABM Zonas Comerciales
+                </button>
+                <div class="w-px h-5 bg-emerald-700/50 mx-1"></div>
+                <div class="relative">
+                    <input type="file" id="fileUpload" accept=".xlsx, .xls, .csv" class="hidden" onchange="App.handleFileUpload(event, 'main')">
+                    <label for="fileUpload" class="cursor-pointer px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-md text-xs font-black transition shadow-md flex items-center gap-2 border border-emerald-400 hover:scale-105 transform">
+                        <i data-lucide="cloud-upload" class="w-4 h-4"></i> Subir Reporte
+                    </label>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Alerta de Destinos Sin Mapear -->
+    <div id="unmappedAlert" class="hidden flex-shrink-0 bg-amber-50 border-b border-amber-200 px-5 py-2 flex justify-between items-center z-40 shadow-sm">
+        <div class="flex items-center gap-3 text-amber-900 text-xs font-bold">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-amber-500"></i>
+            <span>Existen <strong id="unmappedCount" class="bg-amber-200 px-2 py-0.5 rounded text-amber-900">0</strong> destinos excluidos por falta de Zona Asignada.</span>
+        </div>
+        <button onclick="App.toggleConfigModal()" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded font-black shadow-sm transition uppercase tracking-wider">Mapear Ahora</button>
+    </div>
+
+    <!-- Main Content Workspace (Ocupa todo el alto restante y gestiona flex-grow) -->
+    <div class="container mx-auto px-5 py-3 flex-grow flex flex-col gap-3 overflow-hidden min-h-0">
+        
+        <!-- Barra de Filtros -->
+        <section class="flex-shrink-0 bg-white px-4 py-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-3 z-40 relative">
+            <div class="relative flex-1 min-w-[130px] max-w-[180px]">
+                <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Producto</label>
+                <button onclick="App.toggleDropdown('dropProductos')" class="w-full text-left px-2.5 py-1.5 border border-slate-300 rounded-md bg-slate-50 flex justify-between items-center hover:border-emerald-400 transition shadow-sm text-xs font-bold">
+                    <span id="lblProductos" class="truncate text-slate-700">Todos</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                </button>
+                <div id="dropProductos" class="custom-dropdown-panel absolute top-full left-0 w-64 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 relative"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-4 top-4 text-slate-400"></i><input type="text" placeholder="Buscar..." class="w-full text-xs pl-8 pr-2 py-1.5 border border-slate-200 rounded outline-none" onkeyup="App.filterDropdown('listaProductos', this.value)"></div>
+                    <div class="p-1.5 border-b border-slate-100 flex justify-between bg-white"><button onclick="App.selectAll('producto', true)" class="text-[10px] font-bold text-emerald-600 px-2 py-1 hover:bg-emerald-50 rounded">Todos</button><button onclick="App.selectAll('producto', false)" class="text-[10px] font-bold text-slate-500 px-2 py-1 hover:bg-slate-100 rounded">Ninguno</button></div>
+                    <div id="listaProductos" class="max-h-48 overflow-y-auto p-1.5 flex flex-col gap-0.5"></div>
+                </div>
+            </div>
+
+            <div class="relative flex-1 min-w-[130px] max-w-[200px]">
+                <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Zona Comercial</label>
+                <button onclick="App.toggleDropdown('dropZonas')" class="w-full text-left px-2.5 py-1.5 border border-slate-300 rounded-md bg-slate-50 flex justify-between items-center hover:border-emerald-400 transition shadow-sm text-xs font-bold">
+                    <span id="lblZonas" class="truncate text-slate-700">Todas</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                </button>
+                <div id="dropZonas" class="custom-dropdown-panel absolute top-full left-0 w-64 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 relative"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-4 top-4 text-slate-400"></i><input type="text" placeholder="Buscar..." class="w-full text-xs pl-8 pr-2 py-1.5 border border-slate-200 rounded outline-none" onkeyup="App.filterDropdown('listaZonas', this.value)"></div>
+                    <div class="p-1.5 border-b border-slate-100 flex justify-between bg-white"><button onclick="App.selectAll('zona', true)" class="text-[10px] font-bold text-emerald-600 px-2 py-1 hover:bg-emerald-50 rounded">Todas</button><button onclick="App.selectAll('zona', false)" class="text-[10px] font-bold text-slate-500 px-2 py-1 hover:bg-slate-100 rounded">Ninguna</button></div>
+                    <div id="listaZonas" class="max-h-48 overflow-y-auto p-1.5 flex flex-col gap-0.5"></div>
+                </div>
+            </div>
+
+            <div class="relative flex-1 min-w-[130px] max-w-[200px]">
+                <label class="block text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Sub Zona</label>
+                <button onclick="App.toggleDropdown('dropSubZonas')" class="w-full text-left px-2.5 py-1.5 border border-slate-300 rounded-md bg-emerald-50/50 flex justify-between items-center hover:border-emerald-400 transition shadow-sm text-xs font-bold">
+                    <span id="lblSubZonas" class="truncate text-slate-700">Todas</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                </button>
+                <div id="dropSubZonas" class="custom-dropdown-panel absolute top-full left-0 w-64 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 relative"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-4 top-4 text-slate-400"></i><input type="text" placeholder="Buscar..." class="w-full text-xs pl-8 pr-2 py-1.5 border border-slate-200 rounded outline-none" onkeyup="App.filterDropdown('listaSubZonas', this.value)"></div>
+                    <div class="p-1.5 border-b border-slate-100 flex justify-between bg-white"><button onclick="App.selectAll('subZona', true)" class="text-[10px] font-bold text-emerald-600 px-2 py-1 hover:bg-emerald-50 rounded">Todas</button><button onclick="App.selectAll('subZona', false)" class="text-[10px] font-bold text-slate-500 px-2 py-1 hover:bg-slate-100 rounded">Ninguna</button></div>
+                    <div id="listaSubZonas" class="max-h-48 overflow-y-auto p-1.5 flex flex-col gap-0.5"></div>
+                </div>
+            </div>
+
+            <div class="relative flex-1 min-w-[130px] max-w-[200px]">
+                <label class="block text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Destino</label>
+                <button onclick="App.toggleDropdown('dropDestinos')" class="w-full text-left px-2.5 py-1.5 border border-slate-300 rounded-md bg-blue-50/50 flex justify-between items-center hover:border-blue-400 transition shadow-sm text-xs font-bold">
+                    <span id="lblDestinos" class="truncate text-slate-700">Todos</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                </button>
+                <div id="dropDestinos" class="custom-dropdown-panel absolute top-full left-0 w-72 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 relative"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-4 top-4 text-slate-400"></i><input type="text" placeholder="Buscar Destino..." class="w-full text-xs pl-8 pr-2 py-1.5 border border-slate-200 rounded outline-none" onkeyup="App.filterDropdown('listaDestinos', this.value)"></div>
+                    <div class="p-1.5 border-b border-slate-100 flex justify-between bg-white"><button onclick="App.selectAll('destino', true)" class="text-[10px] font-bold text-blue-600 px-2 py-1 hover:bg-blue-50 rounded">Todos</button><button onclick="App.selectAll('destino', false)" class="text-[10px] font-bold text-slate-500 px-2 py-1 hover:bg-slate-100 rounded">Ninguno</button></div>
+                    <div id="listaDestinos" class="max-h-48 overflow-y-auto p-1.5 flex flex-col gap-0.5"></div>
+                </div>
+            </div>
+
+            <div class="flex-none">
+                <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Meses Pendientes</label>
+                <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-md p-0.5 shadow-sm focus-within:border-emerald-500 transition">
+                    <select id="filterDateFrom" class="px-1.5 py-1 text-[11px] bg-transparent focus:outline-none font-bold text-slate-800 cursor-pointer w-[95px]" onchange="App.applyFilters()"></select>
+                    <span class="text-slate-400 font-black text-[10px]">→</span>
+                    <select id="filterDateTo" class="px-1.5 py-1 text-[11px] bg-transparent focus:outline-none font-bold text-slate-800 cursor-pointer w-[95px]" onchange="App.applyFilters()"></select>
+                </div>
+            </div>
+
+            <!-- Stats Rápidas -->
+            <div class="flex-none ml-auto border-l border-slate-200 pl-4 flex gap-5 text-right">
+                <div>
+                    <p class="text-[9px] text-blue-700 font-black uppercase tracking-widest mb-0.5">A Entregar</p>
+                    <p class="text-lg font-black text-slate-800 leading-none"><span id="statEntregar">0</span><span class="text-[8px] font-bold text-blue-500 ml-0.5">TN</span></p>
+                </div>
+                <div>
+                    <p class="text-[9px] text-emerald-600 font-black uppercase tracking-widest mb-0.5">A Recibir</p>
+                    <p class="text-lg font-black text-slate-800 leading-none"><span id="statRecibir">0</span><span class="text-[8px] font-bold text-emerald-400 ml-0.5">TN</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contenedor Estado Vacío / Errores -->
+        <section id="emptyState" class="flex-grow flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center z-10 w-full min-h-0">
+            <div class="bg-slate-50 p-4 rounded-full mb-3 border border-slate-100">
+                <i data-lucide="bar-chart-3" class="w-10 h-10 text-slate-300"></i>
+            </div>
+            <h2 class="text-base font-black text-slate-700">El Panel está Vacío</h2>
+            <p class="text-xs font-medium text-slate-500 mt-1 max-w-sm">Por favor, haz clic en <b>"Subir Reporte"</b> y selecciona tu archivo de Excel exportado del sistema para visualizar la logística.</p>
+        </section>
+
+        <!-- WORKSPACE DINÁMICO (3 GRILLAS APILADAS + BALANCE) -->
+        <section id="workspace" class="hidden flex-grow flex flex-col gap-3 z-10 w-full overflow-hidden min-h-0">
+            
+            <!-- 1. TABLA A ENTREGAR (VENTAS) -->
+            <div id="panelVenta" class="panel-anim flex flex-col bg-white border border-slate-200 rounded-xl shadow-md relative overflow-hidden" style="flex: 4 1 0%;">
+                <div class="px-4 py-1.5 bg-gradient-to-r from-blue-700 to-indigo-600 border-b border-blue-800 flex justify-between items-center shrink-0">
+                    <h2 class="font-black text-white text-[10px] tracking-widest uppercase flex items-center gap-1.5 drop-shadow-sm">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-blue-100"></i> A Entregar (Ventas)
+                    </h2>
+                    <button onclick="App.toggleMaximize('venta')" class="text-blue-200 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
+                        <i id="iconMaxVenta" data-lucide="maximize-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <!-- El contenido se inyecta por JS para permitir el scroll interno perfecto -->
+                <div id="panelVentaContent" class="flex-grow overflow-auto min-h-0 bg-white"></div>
+            </div>
+
+            <!-- 1.5 TABLA BALANCE (SIEMPRE VISIBLE) -->
+            <div id="panelBalance" class="flex-none bg-white border border-slate-300 rounded-lg shadow-sm relative overflow-hidden z-20">
+                <div id="panelBalanceContent" class="hide-scroll overflow-x-auto overflow-y-hidden"></div>
+            </div>
+
+            <!-- 2. TABLA A RECIBIR (COMPRAS) -->
+            <div id="panelCompra" class="panel-anim flex flex-col bg-white border border-slate-200 rounded-xl shadow-md relative overflow-hidden" style="flex: 4 1 0%;">
+                <div class="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 border-b border-emerald-700 flex justify-between items-center shrink-0">
+                    <h2 class="font-black text-white text-[10px] tracking-widest uppercase flex items-center gap-1.5 drop-shadow-sm">
+                        <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-100"></i> A Recibir (Compras)
+                    </h2>
+                    <button onclick="App.toggleMaximize('compra')" class="text-emerald-100 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
+                        <i id="iconMaxCompra" data-lucide="maximize-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="panelCompraContent" class="flex-grow overflow-auto min-h-0 bg-white"></div>
+            </div>
+
+            <!-- 3. DETALLE DE CONTRATOS -->
+            <div id="panelDetalle" class="panel-anim flex flex-col bg-white border border-slate-200 rounded-xl shadow-md relative overflow-hidden" style="flex: 3 1 0%;">
+                <div class="px-4 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 border-b border-slate-900 flex justify-between items-center shrink-0">
+                    <h3 class="font-black text-white text-[10px] flex items-center gap-1.5 uppercase tracking-wide drop-shadow-sm">
+                        <i data-lucide="list-tree" class="w-3.5 h-3.5 text-emerald-400"></i> Detalle de Contratos
+                        <span id="detalleTitulo" class="font-semibold text-slate-300 ml-1.5 capitalize normal-case text-[10px]">- Selecciona un volumen arriba</span>
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <span id="detalleBadge" class="px-2 py-0.5 bg-slate-900/50 text-white border border-slate-600 rounded text-[9px] font-black hidden tracking-wider shadow-inner">0 REG</span>
+                        <button id="btnClearDetalle" onclick="App.clearSelection()" class="hidden text-rose-400 hover:text-rose-300 transition-colors focus:outline-none" title="Limpiar selección y restaurar vista">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="App.toggleMaximize('detalle')" class="text-slate-300 hover:text-white transition-colors focus:outline-none" title="Maximizar / Restaurar">
+                            <i id="iconMaxDetalle" data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-grow overflow-auto min-h-0 bg-white">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="text-slate-600 bg-slate-100 uppercase text-[9px] font-black tracking-widest border-b-2 border-slate-200">
+                            <tr>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Contrato</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">F. Oper.</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Producto</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Tipo</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Precio</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Cosecha</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Representante</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Vendedor</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Comprador</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Desde</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1">Hasta</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1 text-right">Tn Faltantes</th>
+                                <th class="sticky-top bg-slate-100 px-2 py-1 border-r-0">Destino / Zona</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleGrid" class="divide-y divide-slate-100 text-[10px]">
+                            <tr><td colspan="13" class="px-4 py-3 text-center text-slate-400 italic font-semibold text-xs">No hay celdas seleccionadas</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+    <!-- Modal ABM Zonas Comerciales -->
+    <div id="configModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex justify-center items-center">
+        <div class="bg-white rounded-xl shadow-2xl w-[900px] max-w-full max-h-[95vh] flex flex-col border border-slate-200">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h2 class="text-base font-black text-slate-800 flex items-center gap-2"><i data-lucide="map-pin" class="text-emerald-600 w-5 h-5"></i> ABM Zonas, Sub Zonas y Destinos</h2>
+                <button onclick="App.toggleConfigModal()" class="text-slate-400 hover:text-slate-800 bg-white p-1.5 rounded-md border border-slate-200 shadow-sm"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-6 flex-grow overflow-auto flex flex-col gap-5 bg-white">
+                
+                <div class="flex justify-between items-center bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <div class="text-xs text-blue-900">
+                        <strong class="font-black flex items-center gap-1.5 mb-1"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-blue-600"></i> Importación Masiva Excel</strong>
+                        Sube tu archivo "DESTINOS ZONAS.xlsx" para actualizar la base de datos.<br>
+                        <span class="text-[10px] text-blue-700 opacity-80 font-bold uppercase tracking-wide">Requiere columnas: "DESCRIPCION", "ZONA" y "SUB ZONA" (opcional).</span>
+                    </div>
+                    <div>
+                        <input type="file" id="zoneUpload" accept=".xlsx, .xls, .csv" class="hidden" onchange="App.handleFileUpload(event, 'zones')">
+                        <label for="zoneUpload" class="cursor-pointer px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-xs font-black shadow-md inline-flex items-center gap-2 transition">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i> Importar Excel
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200 items-end">
+                    <div class="flex-1">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Destino</label>
+                        <input type="text" id="newDestino" placeholder="Ej: ROSARIO SUR" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none uppercase font-semibold">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Zona Comercial</label>
+                        <input type="text" id="newZona" placeholder="Ej: ZONA ROSARIO TOTAL" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none uppercase font-semibold">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sub Zona</label>
+                        <input type="text" id="newSubZona" placeholder="Ej: ZONA ROSARIO SUR" class="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:border-emerald-500 outline-none uppercase font-semibold">
+                    </div>
+                    <div>
+                        <button onclick="App.addManualZone()" class="px-5 py-2 h-[34px] bg-slate-800 text-white rounded-md text-xs font-bold hover:bg-slate-900 shadow-sm transition">Agregar</button>
+                    </div>
+                </div>
+
+                <div class="border border-slate-200 rounded-lg overflow-hidden flex-grow flex flex-col shadow-sm">
+                    <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 font-bold text-xs text-slate-800 flex justify-between items-center">
+                        <span class="flex items-center gap-2"><i data-lucide="database" class="w-4 h-4 text-slate-500"></i> Tabla de Relaciones</span>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2 text-slate-400"></i>
+                            <input type="text" id="searchZone" placeholder="Buscar..." class="text-[11px] font-semibold pl-8 pr-2 py-1.5 border border-slate-300 rounded-md outline-none w-48 focus:ring-1 focus:ring-emerald-500" onkeyup="App.filterZoneTable(this.value)">
+                        </div>
+                    </div>
+                    <div class="overflow-auto max-h-[250px] bg-white">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10 text-[9px] uppercase tracking-wider font-black">
+                                <tr>
+                                    <th class="px-4 py-2 border-b border-slate-200">Destino (Descripción)</th>
+                                    <th class="px-4 py-2 border-b border-slate-200">Zona Comercial</th>
+                                    <th class="px-4 py-2 border-b border-slate-200">Sub Zona</th>
+                                    <th class="px-4 py-2 border-b border-slate-200 w-16 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="zonesTableBody" class="divide-y divide-slate-100 font-medium"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 rounded-b-xl">
+                <button onclick="App.clearZonesDB()" class="px-4 py-2 text-red-600 hover:bg-red-50 font-bold rounded-md text-xs transition mr-auto border border-transparent hover:border-red-200">Vaciar Base Completa</button>
+                <button onclick="App.exportZonasDB()" class="px-4 py-2 text-emerald-700 hover:bg-emerald-50 font-bold rounded-md text-xs transition border border-emerald-200 flex items-center gap-2"><i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar Diccionario</button>
+                <button onclick="App.toggleConfigModal()" class="px-6 py-2 bg-emerald-700 text-white rounded-md font-bold hover:bg-emerald-800 text-xs shadow-md transition">Guardar y Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const ZONAS_ORDER = [
+            'ZONA ROSARIO TOTAL', 'ZONA BAHIA BLANCA', 'ZONA QUEQUEN', 'ZONA RAMALLO', 
+            'ZONA LIMA/ TLP', 'ZONA JUNIN', 'ZONA DEL GUAZU', 'OTROS'
+        ];
+
+        const App = {
+            data: [],
+            filteredData: [],
+            config: {
+                empresaNombre: 'argentrading',
+                SUPABASE_URL: 'https://tlkmrrdtmhtlotbmazjc.supabase.co',
+                SUPABASE_KEY: 'sb_publishable_FWmpThkFdvqYIzUX4nHUfA_Nl119IV8'
+            },
+            sb: null,
+            claveEscritura: null,
+            state: {
+                layout: 'default',
+                productosSeleccionados: new Set(),
+                zonasSeleccionadas: new Set(),
+                subZonasSeleccionadas: new Set(),
+                destinosSeleccionados: new Set(),
+                celdaActiva: null,
+                zonasDB: {},
+                unmappedDestinos: new Set()
+            },
+
+            normalizeKey: function(str) {
+                if (!str) return '';
+                return String(str).trim().toUpperCase().replace(/\s+/g, ' ');
+            },
+
+            init: function() {
+                // Inicializa cliente Supabase
+                this.sb = window.supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
+                this.state.zonasDB = {};
+                this.setupScrollSync();
+                // Carga datos compartidos desde la nube
+                this.cargarDesdeNube();
+            },
+
+            // Pide (y cachea en memoria de sesión) la clave de escritura
+            pedirClave: function() {
+                if (this.claveEscritura) return this.claveEscritura;
+                const c = prompt("🔒 Ingresá la clave para importar/editar (solo usuarios autorizados):");
+                if (c) this.claveEscritura = c;
+                return this.claveEscritura;
+            },
+
+            // Carga zonas + contratos desde Supabase y renderiza
+            cargarDesdeNube: async function() {
+                const es = document.getElementById('emptyState');
+                const ws = document.getElementById('workspace');
+                if (es) {
+                    ws.classList.add('hidden');
+                    es.classList.remove('hidden');
+                    es.innerHTML = `<div class="p-8 text-center flex flex-col items-center"><i data-lucide="cloud-download" class="w-10 h-10 mb-4 text-emerald-500 animate-pulse"></i><p class="text-slate-700 font-black text-sm uppercase tracking-widest">Cargando datos compartidos...</p></div>`;
+                    lucide.createIcons();
+                }
+                try {
+                    // 1) Diccionario de zonas
+                    const { data: zonas, error: ez } = await this.sb.from('zonas').select('*');
+                    if (ez) throw ez;
+                    const db = {};
+                    (zonas || []).forEach(z => {
+                        db[this.normalizeKey(z.descripcion)] = {
+                            zona: this.normalizeKey(z.zona),
+                            subZona: this.normalizeKey(z.sub_zona || z.zona)
+                        };
+                    });
+                    this.state.zonasDB = db;
+                    this.renderZonasTable();
+
+                    // 2) Contratos
+                    const { data: contratos, error: ec } = await this.sb.from('contratos').select('*');
+                    if (ec) throw ec;
+
+                    if (!contratos || contratos.length === 0) {
+                        if (es) {
+                            es.innerHTML = `<div class="p-8 text-center flex flex-col items-center"><i data-lucide="inbox" class="w-10 h-10 mb-4 text-slate-400"></i><p class="text-slate-600 font-black text-sm uppercase tracking-widest">No hay datos cargados aún</p><p class="text-slate-400 text-xs mt-2 font-bold">Un usuario autorizado debe importar el reporte Excel.</p></div>`;
+                            lucide.createIcons();
+                        }
+                        return;
+                    }
+                    this.data = this.rehidratarContratos(contratos);
+                    this.initUI();
+                    this.checkUnmappedAlert();
+                } catch (err) {
+                    console.error("Error cargando de Supabase:", err);
+                    if (es) {
+                        es.innerHTML = `<div class="p-8 text-center text-red-700 flex flex-col items-center"><i data-lucide="cloud-off" class="w-10 h-10 mb-3"></i><h2 class="text-base font-black mb-1 uppercase">Error de conexión</h2><p class="font-bold text-xs">${err.message || err}</p></div>`;
+                        lucide.createIcons();
+                    }
+                }
+            },
+
+            // Convierte filas planas de Supabase al formato interno (recalcula quincenas y zona)
+            rehidratarContratos: function(rows) {
+                const out = [];
+                this.state.unmappedDestinos.clear();
+                rows.forEach(r => {
+                    const kg = Number(r.kg_pendientes) || 0;
+                    if (kg <= 0) return;
+                    const destinoOriginal = this.cleanString(r.destino_original);
+                    const mapRes = this.mapearDestino(destinoOriginal);
+                    const isoDesde = r.fecha_entrega_desde || null;
+                    const isoHasta = r.fecha_entrega_hasta || null;
+                    out.push({
+                        contrato: this.cleanString(r.contrato),
+                        fechaOperacion: this.isoToDisplay(r.fecha_operacion),
+                        producto: this.cleanString(r.producto),
+                        vendedor: this.cleanString(r.vendedor),
+                        comprador: this.cleanString(r.comprador),
+                        representanteVendedor: this.cleanString(r.representante_vendedor) || this.cleanString(r.vendedor),
+                        fechaEntregaDesde: this.isoToDisplay(isoDesde),
+                        fechaEntregaHasta: this.isoToDisplay(isoHasta),
+                        fechaEntregaDesde_ISO: isoDesde,
+                        fechaEntregaHasta_ISO: isoHasta,
+                        quincenaDesde: this.dateToQuincena(isoDesde),
+                        quincenaHasta: this.dateToQuincena(isoHasta),
+                        kgPendientes: kg, tnFaltantes: kg / 1000,
+                        destinoOriginal: destinoOriginal, destino: destinoOriginal || 'SIN DESTINO',
+                        zona: mapRes.zona, subZona: mapRes.subZona,
+                        tipoContrato: this.cleanString(r.tipo_contrato),
+                        precio: this.cleanString(r.precio) || '-',
+                        cosecha: this.cleanString(r.cosecha),
+                        mesMatriz: isoHasta ? String(isoHasta).substring(0, 7) : 'S/F'
+                    });
+                });
+                return out;
+            },
+
+            isoToDisplay: function(iso) {
+                if (!iso) return '-';
+                const s = String(iso).substring(0, 10);
+                const p = s.split('-');
+                return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : s;
+            },
+
+            setupScrollSync: function() {
+                setTimeout(() => {
+                    const scrollers = [
+                        document.getElementById('panelVentaContent'),
+                        document.getElementById('panelCompraContent'),
+                        document.getElementById('panelBalanceContent')
+                    ];
+                    
+                    let isSyncingLeftScroll = false;
+                    scrollers.forEach(el => {
+                        if(!el) return;
+                        el.addEventListener('scroll', function(e) {
+                            if (!isSyncingLeftScroll) {
+                                isSyncingLeftScroll = true;
+                                scrollers.forEach(target => {
+                                    if (target && target !== e.target) target.scrollLeft = e.target.scrollLeft;
+                                });
+                                window.requestAnimationFrame(() => { isSyncingLeftScroll = false; });
+                            }
+                        });
+                    });
+                }, 500);
+            },
+
+            // --- LAYOUT ENGINE (Flexbox Estricto para Forzar Distribución) ---
+            setLayout: function(mode) {
+                this.state.layout = mode;
+                const pv = document.getElementById('panelVenta');
+                const pc = document.getElementById('panelCompra');
+                const pd = document.getElementById('panelDetalle');
+                
+                const iV = document.getElementById('iconMaxVenta');
+                const iC = document.getElementById('iconMaxCompra');
+                const iD = document.getElementById('iconMaxDetalle');
+
+                if(iV) iV.setAttribute('data-lucide', mode === 'max-venta' ? 'minimize-2' : 'maximize-2');
+                if(iC) iC.setAttribute('data-lucide', mode === 'max-compra' ? 'minimize-2' : 'maximize-2');
+                if(iD) iD.setAttribute('data-lucide', mode === 'max-detalle' ? 'minimize-2' : 'maximize-2');
+                lucide.createIcons();
+
+                const rows = document.querySelectorAll('.data-row');
+                if (mode === 'detail' && this.state.celdaActiva) {
+                    rows.forEach(r => {
+                        const rTipo = r.getAttribute('data-tipo');
+                        const rEnt = r.getAttribute('data-entidad');
+                        r.style.display = (rTipo === this.state.celdaActiva.tipo && rEnt === this.state.celdaActiva.entidad) ? '' : 'none';
+                    });
+                } else {
+                    rows.forEach(r => r.style.display = '');
+                }
+
+                // Usamos flex: X 1 0% para obligar a flexbox a usar estrictamente estas proporciones sin importar el contenido interno
+                if (mode === 'default') {
+                    pv.style.flex = "4 1 0%"; pc.style.flex = "4 1 0%"; pd.style.flex = "3 1 0%";
+                } else if (mode === 'detail') {
+                    pv.style.flex = "0 0 auto"; pc.style.flex = "0 0 auto"; pd.style.flex = "1 1 0%";
+                } else if (mode === 'max-venta') {
+                    pv.style.flex = "8 1 0%"; pc.style.flex = "2 1 0%"; pd.style.flex = "2 1 0%";
+                } else if (mode === 'max-compra') {
+                    pv.style.flex = "2 1 0%"; pc.style.flex = "8 1 0%"; pd.style.flex = "2 1 0%";
+                } else if (mode === 'max-detalle') {
+                    pv.style.flex = "2 1 0%"; pc.style.flex = "2 1 0%"; pd.style.flex = "8 1 0%";
+                }
+            },
+
+            toggleMaximize: function(panel) {
+                const targetMode = `max-${panel}`;
+                if (this.state.layout === targetMode) {
+                    this.setLayout(this.state.celdaActiva ? 'detail' : 'default');
+                } else {
+                    this.setLayout(targetMode);
+                }
+            },
+
+            saveZonasDB: function() {
+                // El estado local ya fue actualizado por el llamador.
+                // La persistencia en la nube se hace vía RPC en cada operación.
+                this.renderZonasTable();
+                // Re-aplica el mapeo a los contratos en memoria y re-renderiza
+                if (this.data && this.data.length) {
+                    this.data.forEach(d => {
+                        const m = this.mapearDestino(d.destinoOriginal);
+                        d.zona = m.zona; d.subZona = m.subZona;
+                    });
+                }
+            },
+
+            mapearDestino: function(destino) {
+                if(!destino) return { zona: 'SIN ASIGNAR', subZona: 'SIN ASIGNAR' };
+                const d = this.normalizeKey(destino);
+                if(this.state.zonasDB[d]) return this.state.zonasDB[d];
+                this.state.unmappedDestinos.add(d);
+                return { zona: 'SIN ASIGNAR', subZona: 'SIN ASIGNAR' };
+            },
+
+            toggleConfigModal: function() {
+                const modal = document.getElementById('configModal');
+                if (modal.classList.contains('hidden')) {
+                    this.renderZonasTable();
+                    modal.classList.remove('hidden');
+                } else {
+                    modal.classList.add('hidden');
+                    if(this.data.length > 0) this.reprocessZonas();
+                }
+            },
+
+            renderZonasTable: function() {
+                const tbody = document.getElementById('zonesTableBody');
+                tbody.innerHTML = '';
+                
+                this.state.unmappedDestinos.forEach(d => {
+                    if(!this.state.zonasDB[d]) { 
+                        tbody.innerHTML += `
+                            <tr class="bg-amber-50">
+                                <td class="px-4 py-2 font-bold text-amber-900">${d} <span class="text-[8px] ml-1.5 bg-amber-200 px-1.5 py-0.5 rounded uppercase font-black text-amber-800">Falta</span></td>
+                                <td colspan="2" class="px-4 py-2 text-red-600 font-bold italic text-[10px]">Sin asignación (Falta Zona/Sub Zona)</td>
+                                <td class="px-4 py-2 text-center"><button onclick="document.getElementById('newDestino').value='${d}'; document.getElementById('newZona').focus()" class="text-[10px] font-black text-blue-600 hover:text-blue-800 hover:underline">Resolver</button></td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                Object.keys(this.state.zonasDB).sort().forEach(k => {
+                    const zData = this.state.zonasDB[k];
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-1.5 font-bold text-slate-700">${k}</td>
+                            <td class="px-4 py-1.5 text-slate-500 font-bold">${zData.zona}</td>
+                            <td class="px-4 py-1.5 text-emerald-600 font-semibold">${zData.subZona}</td>
+                            <td class="px-4 py-1.5 text-center"><button onclick="App.deleteZone('${k}')" class="text-slate-400 hover:text-red-600 bg-white border border-slate-200 p-1 rounded shadow-sm hover:border-red-200 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+                        </tr>
+                    `;
+                });
+                lucide.createIcons();
+            },
+
+            addManualZone: async function() {
+                const dest = this.normalizeKey(document.getElementById('newDestino').value);
+                const zona = this.normalizeKey(document.getElementById('newZona').value);
+                const subZona = this.normalizeKey(document.getElementById('newSubZona').value) || zona;
+                if(!dest || !zona) { alert("Completa al menos el Destino y la Zona Comercial."); return; }
+
+                const clave = this.pedirClave();
+                if (!clave) return;
+
+                const { error } = await this.sb.rpc('guardar_zona', { p_clave: clave, p_desc: dest, p_zona: zona, p_subzona: subZona });
+                if (error) { alert("No se pudo guardar (¿clave incorrecta?): " + error.message); return; }
+
+                this.state.zonasDB[dest] = { zona, subZona };
+                this.state.unmappedDestinos.delete(dest);
+                document.getElementById('newDestino').value = ''; document.getElementById('newZona').value = ''; document.getElementById('newSubZona').value = '';
+                this.saveZonasDB();
+                this.checkUnmappedAlert();
+                this.refreshVista();
+            },
+
+            deleteZone: async function(key) {
+                if(!confirm(`¿Eliminar la asociación para "${key}"?`)) return;
+                const clave = this.pedirClave();
+                if (!clave) return;
+                const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_desc: key });
+                if (error) { alert("No se pudo eliminar (¿clave incorrecta?): " + error.message); return; }
+                delete this.state.zonasDB[key];
+                this.saveZonasDB();
+                this.refreshVista();
+            },
+
+            clearZonesDB: function() {
+                alert("Para evitar borrados masivos accidentales en la base compartida, esta acción está deshabilitada. Eliminá los destinos uno por uno o pedí asistencia para un reset.");
+            },
+
+            // Re-renderiza la vista principal si hay datos cargados
+            refreshVista: function() {
+                if (this.data && this.data.length) {
+                    this.initUI();
+                }
+            },
+
+            exportZonasDB: function() {
+                const keys = Object.keys(this.state.zonasDB).sort();
+                if(keys.length === 0) { alert("El diccionario está vacío. No hay nada para exportar."); return; }
+
+                const aoa = [['DESCRIPCION', 'ZONA', 'SUB ZONA']];
+                keys.forEach(k => {
+                    const z = this.state.zonasDB[k];
+                    aoa.push([k, z.zona || '', z.subZona || '']);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+                ws['!cols'] = [{wch: 40}, {wch: 25}, {wch: 25}];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'DESTINOS ZONAS');
+
+                const hoy = new Date();
+                const stamp = `${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}${String(hoy.getDate()).padStart(2,'0')}`;
+                XLSX.writeFile(wb, `DESTINOS_ZONAS_${stamp}.xlsx`);
+            },
+
+            filterZoneTable: function(term) {
+                const lower = term.toLowerCase();
+                const rows = document.getElementById('zonesTableBody').getElementsByTagName('tr');
+                for(let row of rows) row.style.display = row.innerText.toLowerCase().includes(lower) ? '' : 'none';
+            },
+
+            reprocessZonas: function() {
+                this.state.unmappedDestinos.clear();
+                this.data.forEach(d => { 
+                    const mapRes = this.mapearDestino(d.destinoOriginal);
+                    d.zona = mapRes.zona; d.subZona = mapRes.subZona;
+                });
+                this.initUI();
+                this.checkUnmappedAlert();
+            },
+
+            parseCustomDateISO: function(dateStr) {
+                if(!dateStr) return null;
+                let str = String(dateStr).trim();
+                if (str === '-' || str === '') return null;
+
+                let y, m, d;
+                if (!isNaN(str) && Number(str) > 20000) {
+                    const excelDays = Number(str);
+                    const date = new Date((excelDays - 25569) * 86400000);
+                    if(!isNaN(date.getTime())) {
+                        y = date.getUTCFullYear(); m = String(date.getUTCMonth() + 1).padStart(2, '0'); d = String(date.getUTCDate()).padStart(2, '0');
+                    }
+                } else if (str.includes('/')) {
+                    const parts = str.split('/');
+                    if (parts.length >= 3) {
+                        d = parts[0].padStart(2, '0'); m = parts[1].padStart(2, '0'); y = parts[2];
+                        if (y.length === 2) y = '20' + y;
+                    }
+                } else if (str.includes('-')) {
+                    const parts = str.split('-');
+                    if (parts.length >= 3) {
+                        if (parts[0].length === 4) { y = parts[0]; m = parts[1].padStart(2, '0'); d = parts[2].substring(0,2).padStart(2, '0'); }
+                        else if (parts[2].length === 4) { y = parts[2]; m = parts[1].padStart(2, '0'); d = parts[0].substring(0,2).padStart(2, '0'); }
+                    }
+                }
+                if (y && m && d) return `${y}-${m}-${d}`;
+                return null;
+            },
+
+            dateToQuincena: function(isoDate) {
+                if (!isoDate) return null;
+                const parts = isoDate.split('-');
+                return `${parts[0]}-${parts[1]}-${parseInt(parts[2], 10) <= 15 ? '01' : '15'}`;
+            },
+
+            getEndLimit: function(val) {
+                if (!val) return '9999-12-31';
+                const parts = val.split('-');
+                if (parseInt(parts[2], 10) === 1) {
+                    return `${parts[0]}-${parts[1]}-${String(new Date(parseInt(parts[0], 10), parseInt(parts[1], 10), 0).getDate()).padStart(2, '0')}`;
+                } else {
+                    return `${parts[0]}-${parts[1]}-15`;
+                }
+            },
+
+            formatExactDate: function(dateStr) {
+                const iso = this.parseCustomDateISO(dateStr);
+                if (!iso) return '-';
+                const p = iso.split('-');
+                return `${p[2]}/${p[1]}/${p[0]}`;
+            },
+
+            formatPrecio: function(val) {
+                if (val === undefined || val === null || val === '') return '-';
+                if (typeof val === 'number') return val.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                return String(val).trim() || '-';
+            },
+
+            parseCustomNumber: function(val) {
+                if (!val) return 0;
+                let str = String(val).trim();
+                if (str === '-' || str === '') return 0;
+                if (str.includes(',') && str.includes('.')) str = str.replace(/\./g, '').replace(',', '.');
+                else if (str.includes(',')) str = str.replace(',', '.');
+                return parseFloat(str) || 0;
+            },
+
+            formatMesVisible: function(val) {
+                if (!val || val === 'S/F') return 'Sin Fecha';
+                try {
+                    const parts = String(val).trim().split('-');
+                    if (parts.length < 3) return val; 
+                    const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+                    const mesStr = dateObj.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }).replace('.', '').toUpperCase();
+                    return parts[2] === '01' ? `${mesStr}` : `15 ${mesStr}`;
+                } catch(e) { return 'Sin Fecha'; }
+            },
+            
+            getDynamicMonthLabel: function(yyyy_mm) {
+                if (yyyy_mm === 'S/F') return 'Sin Fecha';
+                const fDesde = document.getElementById('filterDateFrom').value;
+                const fHasta = document.getElementById('filterDateTo').value;
+                if (fDesde && fDesde.startsWith(yyyy_mm) && fDesde.endsWith('-15')) return this.formatMesVisible(fDesde); 
+                if (fHasta && fHasta.startsWith(yyyy_mm) && fHasta.endsWith('-15')) return this.formatMesVisible(fHasta); 
+                return this.formatMesVisible(`${yyyy_mm}-01`); 
+            },
+
+            formatNumber: function(num) {
+                return num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            },
+
+            cleanString: function(val) {
+                if (val === undefined || val === null) return '';
+                return String(val).trim().replace(/\s+/g, ' ');
+            },
+
+            handleFileUpload: function(event, type) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if(type === 'main') {
+                    this.state.unmappedDestinos.clear();
+                    document.getElementById('unmappedAlert').classList.add('hidden');
+                    const ws = document.getElementById('workspace');
+                    const es = document.getElementById('emptyState');
+                    ws.classList.add('hidden');
+                    es.classList.remove('hidden');
+                    es.innerHTML = `<div class="p-8 text-center flex flex-col items-center"><i data-lucide="loader-2" class="w-10 h-10 mb-4 text-emerald-500 animate-spin"></i><p class="text-slate-700 font-black text-sm uppercase tracking-widest">Procesando Logística...</p></div>`;
+                    lucide.createIcons();
+                }
+
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'csv') {
+                    Papa.parse(file, { skipEmptyLines: true, complete: (results) => {
+                            try { if(type === 'main') App.process2DArray(results.data); else App.processZonesArray(results.data); }
+                            catch (err) { if(type==='main') App.showError("Error: " + err.message); else alert("Error en Zonas: " + err.message); }
+                        } });
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, {type: 'array', cellDates: false}); 
+                            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1, raw: true, defval: ''});
+                            if(type === 'main') App.process2DArray(rows); else App.processZonesArray(rows);
+                        } catch (err) {
+                            if(type==='main') App.showError("Error Excel: " + err.message); else alert("Error Excel Zonas: " + err.message);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+                event.target.value = ''; 
+            },
+
+            showError: function(msg) {
+                document.getElementById('workspace').classList.add('hidden');
+                const es = document.getElementById('emptyState');
+                es.classList.remove('hidden');
+                es.innerHTML = `<div class="p-8 text-center text-red-700 flex flex-col items-center"><i data-lucide="alert-triangle" class="w-10 h-10 mb-3 opacity-90"></i><h2 class="text-base font-black mb-1 uppercase tracking-wide">Error en el archivo</h2><p class="font-bold text-xs">${msg}</p></div>`;
+                lucide.createIcons();
+            },
+
+            processZonesArray: async function(rows) {
+                let headerIdx = -1;
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                    if (!rows[i] || !Array.isArray(rows[i])) continue;
+                    const rowStr = rows[i].join('').toUpperCase();
+                    if (rowStr.includes('DESCRIPCION') || rowStr.includes('ZONA')) { headerIdx = i; break; }
+                }
+                if(headerIdx === -1) { alert("No se detectaron las columnas 'DESCRIPCION' y 'ZONA'."); return; }
+
+                const headers = rows[headerIdx].map(h => String(h).toUpperCase().replace(/\s+/g, ''));
+                const getIdx = (name) => headers.findIndex(h => h.includes(name));
+                const idxDesc = getIdx('DESCRIPCION'), idxZona = getIdx('ZONA');
+                let idxSubZona = getIdx('SUBZONA');
+                if (idxSubZona === -1) idxSubZona = headers.findIndex(h => h.includes('SUB') && h.includes('ZONA'));
+
+                if(idxDesc === -1 || idxZona === -1) { alert("Falta columna DESCRIPCION o ZONA."); return; }
+
+                const clave = this.pedirClave();
+                if (!clave) return;
+
+                const filas = [];
+                const localBatch = {};
+                for(let i = headerIdx + 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if(!row || !row[idxDesc]) continue;
+                    const desc = this.normalizeKey(row[idxDesc]);
+                    if(!desc) continue;
+                    const zona = this.normalizeKey(row[idxZona] || 'OTROS');
+                    const subZona = (idxSubZona !== -1 && row[idxSubZona]) ? this.normalizeKey(row[idxSubZona]) : zona;
+                    filas.push({ descripcion: desc, zona: zona, sub_zona: subZona });
+                    localBatch[desc] = { zona, subZona };
+                }
+
+                if (filas.length === 0) { alert("No se encontraron filas válidas."); return; }
+
+                const { data, error } = await this.sb.rpc('importar_zonas', { p_clave: clave, p_filas: filas });
+                if (error) { alert("No se pudo importar el diccionario (¿clave incorrecta?): " + error.message); return; }
+
+                Object.assign(this.state.zonasDB, localBatch);
+                Object.keys(localBatch).forEach(d => this.state.unmappedDestinos.delete(d));
+                this.saveZonasDB();
+                this.checkUnmappedAlert();
+                this.refreshVista();
+                alert(`¡Éxito! Se cargaron/actualizaron ${filas.length} destinos en la base compartida.`);
+            },
+
+            process2DArray: function(rows) {
+                try {
+                    let headerIdx = -1;
+                    for (let i = 0; i < rows.length; i++) {
+                        if (!rows[i] || !Array.isArray(rows[i])) continue;
+                        if (rows[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '').includes('nroctrat')) { headerIdx = i; break; }
+                    }
+                    if(headerIdx === -1) { this.showError("No se encontró la cabecera 'NroCtrat'."); return; }
+
+                    const headers = rows[headerIdx].map(h => String(h).toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    const getIdx = (names) => {
+                        for(let n of names) {
+                            const idx = headers.findIndex(h => h === n.toLowerCase().replace(/[^a-z0-9]/g, '') || h.includes(n.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                            if(idx !== -1) return idx;
+                        }
+                        return -1; 
+                    };
+
+                    const map = {
+                        contrato: getIdx(['nroctrat']), fechaOp: getIdx(['fechaoperacion']),
+                        producto: getIdx(['mercaderia', 'producto']), vendedor: getIdx(['rsocialvendedor', 'vendedor']),
+                        comprador: getIdx(['rsocialcomprador', 'comprador']), repreVend: getIdx(['reprevendedor']), repre: getIdx(['representante']),
+                        fDesde: getIdx(['fechadeentregadesde', 'entregadesde']), fHasta: getIdx(['fechadeentregahasta', 'entregahasta']),
+                        kgFalta: getIdx(['kgfaltaentregar', 'kilos pendientes', 'faltaentregar']), destino: getIdx(['destino']),
+                        tipo: getIdx(['desctipoctrat', 'tipocontrato']), cosecha: getIdx(['cosechaasstring', 'cosecha']), precio: getIdx(['precio']) 
+                    };
+
+                    const parsedData = [];
+                    for(let i = headerIdx + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if(!row || !Array.isArray(row) || row.length === 0) continue;
+                        const getVal = (idx) => idx !== -1 ? row[idx] : '';
+                        if (!this.cleanString(getVal(map.contrato))) continue;
+                        
+                        const kg = this.parseCustomNumber(getVal(map.kgFalta));
+                        if(kg <= 0) continue;
+
+                        const destinoOriginal = this.cleanString(getVal(map.destino));
+                        const mapRes = this.mapearDestino(destinoOriginal);
+                        const isoDesde = this.parseCustomDateISO(getVal(map.fDesde));
+                        const isoHasta = this.parseCustomDateISO(getVal(map.fHasta));
+
+                        parsedData.push({
+                            contrato: this.cleanString(getVal(map.contrato)),
+                            fechaOperacion: this.formatExactDate(getVal(map.fechaOp)),
+                            producto: this.cleanString(getVal(map.producto)),
+                            vendedor: this.cleanString(getVal(map.vendedor)),
+                            comprador: this.cleanString(getVal(map.comprador)),
+                            representanteVendedor: this.cleanString(getVal(map.repreVend)) || this.cleanString(getVal(map.repre)) || this.cleanString(getVal(map.vendedor)), 
+                            fechaEntregaDesde: this.formatExactDate(getVal(map.fDesde)),
+                            fechaEntregaHasta: this.formatExactDate(getVal(map.fHasta)),
+                            fechaEntregaDesde_ISO: isoDesde,
+                            fechaEntregaHasta_ISO: isoHasta,
+                            quincenaDesde: this.dateToQuincena(isoDesde),
+                            quincenaHasta: this.dateToQuincena(isoHasta),
+                            kgPendientes: kg, tnFaltantes: kg / 1000,
+                            destinoOriginal: destinoOriginal, destino: destinoOriginal || 'SIN DESTINO', 
+                            zona: mapRes.zona, subZona: mapRes.subZona,
+                            tipoContrato: this.cleanString(getVal(map.tipo)),
+                            precio: map.precio !== -1 ? this.formatPrecio(row[map.precio]) : '-',
+                            cosecha: this.cleanString(getVal(map.cosecha)),
+                            mesMatriz: isoHasta ? isoHasta.substring(0, 7) : 'S/F'
+                        });
+                    }
+
+                    if (parsedData.length === 0) {
+                         this.showError("Archivo leído, pero no hay contratos con Deuda (KgFaltaEntregar > 0).");
+                    } else {
+                        this.data = parsedData;
+                        this.initUI();
+                        this.checkUnmappedAlert();
+                        // Sube a la nube para que todos lo vean
+                        this.subirContratos(parsedData);
+                    }
+                } catch (err) {
+                    console.error("Error fatal:", err);
+                    this.showError("Error inesperado procesando filas: " + err.message);
+                }
+            },
+
+            // Sube el set completo de contratos a Supabase (reemplaza lo anterior)
+            subirContratos: async function(parsedData) {
+                const clave = this.pedirClave();
+                if (!clave) { alert("Importación local realizada, pero NO se subió a la nube (sin clave). Los demás no la verán."); return; }
+
+                // Mapea al esquema plano de la tabla
+                const filas = parsedData.map(d => ({
+                    contrato: d.contrato,
+                    fecha_operacion: this.displayToISO(d.fechaOperacion),
+                    producto: d.producto,
+                    vendedor: d.vendedor,
+                    comprador: d.comprador,
+                    representante_vendedor: d.representanteVendedor,
+                    fecha_entrega_desde: d.fechaEntregaDesde_ISO,
+                    fecha_entrega_hasta: d.fechaEntregaHasta_ISO,
+                    kg_pendientes: d.kgPendientes,
+                    destino_original: d.destinoOriginal,
+                    tipo_contrato: d.tipoContrato,
+                    precio: String(d.precio || ''),
+                    cosecha: d.cosecha
+                }));
+
+                this.showCloudStatus(`Subiendo ${filas.length} contratos a la nube...`, 'loading');
+                try {
+                    const LOTE = 1000;
+                    let total = 0;
+                    for (let i = 0; i < filas.length; i += LOTE) {
+                        const chunk = filas.slice(i, i + LOTE);
+                        const esPrimero = (i === 0);
+                        const { data, error } = await this.sb.rpc('importar_contratos', {
+                            p_clave: clave, p_filas: chunk, p_reemplazar: esPrimero
+                        });
+                        if (error) throw error;
+                        total += (data || chunk.length);
+                        this.showCloudStatus(`Subiendo... ${Math.min(i + LOTE, filas.length)}/${filas.length}`, 'loading');
+                    }
+                    this.showCloudStatus(`✔ ${total} contratos sincronizados. Todos los usuarios ya los ven.`, 'ok');
+                } catch (err) {
+                    console.error(err);
+                    this.showCloudStatus(`✖ No se pudo subir (${err.message || err}). ¿Clave correcta?`, 'error');
+                }
+            },
+
+            // Convierte "DD/MM/AAAA" a ISO "AAAA-MM-DD"
+            displayToISO: function(s) {
+                if (!s || s === '-') return null;
+                const p = String(s).split('/');
+                if (p.length !== 3) return null;
+                return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            },
+
+            showCloudStatus: function(msg, kind) {
+                let el = document.getElementById('cloudStatus');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'cloudStatus';
+                    el.className = 'fixed bottom-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-2xl text-xs font-black uppercase tracking-wide transition-all';
+                    document.body.appendChild(el);
+                }
+                const colors = {
+                    loading: 'bg-slate-800 text-white',
+                    ok: 'bg-emerald-600 text-white',
+                    error: 'bg-red-600 text-white'
+                };
+                el.className = el.className.replace(/bg-\S+ text-\S+/g, '') + ' ' + (colors[kind] || colors.loading);
+                el.textContent = msg;
+                el.style.opacity = '1';
+                if (kind !== 'loading') {
+                    setTimeout(() => { if(el) el.style.opacity = '0'; }, 6000);
+                }
+            },
+
+            checkUnmappedAlert: function() {
+                const alertEl = document.getElementById('unmappedAlert');
+                if(this.state.unmappedDestinos.size > 0) {
+                    document.getElementById('unmappedCount').innerText = this.state.unmappedDestinos.size;
+                    alertEl.classList.remove('hidden');
+                } else {
+                    alertEl.classList.add('hidden');
+                }
+            },
+
+            initUI: function() {
+                const prodUnicos = [...new Set(this.data.map(d => d.producto).filter(Boolean))].sort();
+                this.state.productosSeleccionados = new Set(prodUnicos);
+                this.renderDropdownChecks('listaProductos', prodUnicos, 'producto');
+
+                let quincenasSet = new Set();
+                this.data.forEach(d => {
+                    if (d.quincenaDesde) quincenasSet.add(d.quincenaDesde);
+                    if (d.quincenaHasta) quincenasSet.add(d.quincenaHasta);
+                });
+                const mesesUnicos = Array.from(quincenasSet).sort();
+
+                const selFrom = document.getElementById('filterDateFrom');
+                const selTo = document.getElementById('filterDateTo');
+                selFrom.innerHTML = '<option value="">Todos</option>';
+                selTo.innerHTML = '<option value="">Todos</option>';
+                
+                mesesUnicos.forEach(m => {
+                    const text = this.formatMesVisible(m);
+                    selFrom.innerHTML += `<option value="${m}">${text}</option>`;
+                    selTo.innerHTML += `<option value="${m}">${text}</option>`;
+                });
+                if(mesesUnicos.length > 0) {
+                    selFrom.value = mesesUnicos[0]; selTo.value = mesesUnicos[mesesUnicos.length - 1];
+                }
+
+                const zonaUnicas = [...new Set(this.data.map(d => d.zona))].filter(z => z && z.toUpperCase() !== 'SIN ASIGNAR').sort((a, b) => {
+                    const idxA = ZONAS_ORDER.indexOf(a.toUpperCase()), idxB = ZONAS_ORDER.indexOf(b.toUpperCase());
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1; if (idxB !== -1) return 1; return a.localeCompare(b);
+                });
+                
+                this.state.zonasSeleccionadas = new Set(zonaUnicas);
+                this.renderDropdownChecks('listaZonas', zonaUnicas, 'zona');
+                
+                this.updateFiltersCascade('init');
+                this.setLayout('default'); 
+            },
+
+            updateFiltersCascade: function(sourceLevel) {
+                if (sourceLevel === 'zona' || sourceLevel === 'init') {
+                    let validSubZonas = new Set();
+                    this.data.forEach(d => { if(this.state.zonasSeleccionadas.has(d.zona) && d.subZona.toUpperCase() !== 'SIN ASIGNAR') validSubZonas.add(d.subZona); });
+                    this.state.subZonasSeleccionadas = new Set(validSubZonas);
+                    this.renderDropdownChecks('listaSubZonas', Array.from(validSubZonas).sort(), 'subZona');
+                }
+                if (sourceLevel === 'zona' || sourceLevel === 'subZona' || sourceLevel === 'init') {
+                    let validDestinos = new Set();
+                    this.data.forEach(d => { if(this.state.zonasSeleccionadas.has(d.zona) && this.state.subZonasSeleccionadas.has(d.subZona)) validDestinos.add(d.destino); });
+                    this.state.destinosSeleccionados = new Set(validDestinos);
+                    this.renderDropdownChecks('listaDestinos', Array.from(validDestinos).sort(), 'destino');
+                }
+                this.updateLabels();
+                this.applyFilters();
+            },
+
+            renderDropdownChecks: function(containerId, items, typeStr) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                let colorRing = typeStr === 'destino' ? 'focus:ring-blue-500' : 'focus:ring-emerald-500';
+                let textColor = typeStr === 'destino' ? 'text-blue-600' : 'text-emerald-600';
+
+                items.forEach(item => {
+                    const id = `chk_${typeStr}_${item.replace(/[^a-zA-Z0-9]/g, '')}`;
+                    const setRef = typeStr === 'producto' ? this.state.productosSeleccionados : typeStr === 'zona' ? this.state.zonasSeleccionadas : typeStr === 'subZona' ? this.state.subZonasSeleccionadas : this.state.destinosSeleccionados;
+                    const isChecked = setRef.has(item) ? 'checked' : '';
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 rounded cursor-pointer transition';
+                    div.innerHTML = `<input type="checkbox" id="${id}" value="${item}" ${isChecked} class="w-3.5 h-3.5 ${textColor} rounded cursor-pointer border-slate-300 ${colorRing}"><label for="${id}" class="text-xs font-bold cursor-pointer w-full text-slate-700 truncate" title="${item}">${item}</label>`;
+                    div.querySelector('input').addEventListener('change', (e) => {
+                        if(e.target.checked) setRef.add(item); else setRef.delete(item);
+                        if (typeStr === 'producto') { this.updateLabels(); this.applyFilters(); } else { this.updateFiltersCascade(typeStr); }
+                    });
+                    container.appendChild(div);
+                });
+            },
+
+            toggleDropdown: function(id) {
+                const el = document.getElementById(id);
+                const isShowing = el.classList.contains('show');
+                document.querySelectorAll('.custom-dropdown-panel').forEach(d => d.classList.remove('show'));
+                if(!isShowing) el.classList.add('show');
+            },
+
+            filterDropdown: function(containerId, term) {
+                const lower = term.toLowerCase();
+                document.querySelectorAll(`#${containerId} .dropdown-item`).forEach(div => div.style.display = div.innerText.toLowerCase().includes(lower) ? 'flex' : 'none');
+            },
+
+            selectAll: function(typeStr, check) {
+                const setRef = typeStr === 'producto' ? this.state.productosSeleccionados : typeStr === 'zona' ? this.state.zonasSeleccionadas : typeStr === 'subZona' ? this.state.subZonasSeleccionadas : this.state.destinosSeleccionados;
+                const containerId = typeStr === 'producto' ? 'listaProductos' : typeStr === 'zona' ? 'listaZonas' : typeStr === 'subZona' ? 'listaSubZonas' : 'listaDestinos';
+                document.querySelectorAll(`#${containerId} input[type="checkbox"]`).forEach(chk => {
+                    if(chk.parentElement.style.display !== 'none') { chk.checked = check; if(check) setRef.add(chk.value); else setRef.delete(chk.value); }
+                });
+                if (typeStr === 'producto') { this.updateLabels(); this.applyFilters(); } else { this.updateFiltersCascade(typeStr); }
+            },
+
+            updateLabels: function() {
+                const formatLabel = (set, listId, defAll) => {
+                    const totalItems = document.querySelectorAll(`#${listId} input`).length;
+                    if(totalItems === 0) return 'Ninguna Opción';
+                    return set.size === totalItems ? defAll : (set.size === 0 ? 'Ninguno' : `${set.size} selec.`);
+                };
+                document.getElementById('lblProductos').innerText = formatLabel(this.state.productosSeleccionados, 'listaProductos', 'Todos');
+                document.getElementById('lblZonas').innerText = formatLabel(this.state.zonasSeleccionadas, 'listaZonas', 'Todas');
+                document.getElementById('lblSubZonas').innerText = formatLabel(this.state.subZonasSeleccionadas, 'listaSubZonas', 'Todas');
+                document.getElementById('lblDestinos').innerText = formatLabel(this.state.destinosSeleccionados, 'listaDestinos', 'Todos');
+            },
+
+            applyFilters: function() {
+                const fDesde = document.getElementById('filterDateFrom').value;
+                const fHasta = document.getElementById('filterDateTo').value;
+
+                this.filteredData = this.data.filter(d => {
+                    if(!this.state.productosSeleccionados.has(d.producto)) return false;
+                    if(!this.state.zonasSeleccionadas.has(d.zona)) return false; 
+                    if(!this.state.subZonasSeleccionadas.has(d.subZona)) return false; 
+                    if(!this.state.destinosSeleccionados.has(d.destino)) return false; 
+                    
+                    const dDesde = d.fechaEntregaDesde_ISO || d.fechaEntregaHasta_ISO;
+                    const dHasta = d.fechaEntregaHasta_ISO || d.fechaEntregaDesde_ISO;
+                    if (fDesde && (!dDesde || dDesde < fDesde)) return false;
+                    if (fHasta && (!dHasta || dHasta > this.getEndLimit(fHasta))) return false;
+                    return true;
+                });
+
+                this.state.celdaActiva = null;
+                const btnClear = document.getElementById('btnClearDetalle');
+                if(btnClear) btnClear.classList.add('hidden');
+                
+                this.setLayout('default');
+                this.renderMatrices();
+                this.renderDetalleGrid();
+            },
+
+            renderMatrices: function() {
+                const ws = document.getElementById('workspace');
+                const es = document.getElementById('emptyState');
+                
+                if(this.filteredData.length === 0) {
+                    ws.classList.add('hidden'); es.classList.remove('hidden');
+                    es.innerHTML = `<div class="bg-slate-50 p-4 rounded-full mb-3 border border-slate-100"><i data-lucide="filter" class="w-10 h-10 text-slate-300"></i></div><h2 class="text-base font-black text-slate-700">Sin Resultados</h2><p class="text-xs font-medium text-slate-500 mt-1 max-w-sm">No hay registros para la combinación de filtros actual.</p>`;
+                    document.getElementById('statRecibir').innerText = "0"; document.getElementById('statEntregar').innerText = "0";
+                    lucide.createIcons();
+                    return;
+                }
+
+                ws.classList.remove('hidden'); es.classList.add('hidden');
+                
+                const myName = this.config.empresaNombre; 
+                const ventas = this.filteredData.filter(d => d.vendedor && String(d.vendedor).toLowerCase().includes(myName));
+                const compras = this.filteredData.filter(d => d.comprador && String(d.comprador).toLowerCase().includes(myName));
+
+                document.getElementById('statEntregar').innerText = this.formatNumber(ventas.reduce((a, b) => a + b.tnFaltantes, 0));
+                document.getElementById('statRecibir').innerText = this.formatNumber(compras.reduce((a, b) => a + b.tnFaltantes, 0));
+
+                const mesesSet = new Set([...compras.map(d=>d.mesMatriz), ...ventas.map(d=>d.mesMatriz)]);
+                let mesesArr = Array.from(mesesSet).sort(); 
+                if(mesesArr.includes('S/F')) { mesesArr = mesesArr.filter(m => m !== 'S/F'); mesesArr.push('S/F'); }
+                let sortMonth = mesesArr[mesesArr.length - 1];
+                if(sortMonth === 'S/F' && mesesArr.length > 1) sortMonth = mesesArr[mesesArr.length - 2];
+
+                const buildPivot = (dataArray, rowField) => {
+                    const pivot = {}; const colTotals = {};
+                    mesesArr.forEach(m => colTotals[m] = 0);
+                    let grandTotal = 0;
+                    dataArray.forEach(d => {
+                        const rowName = d[rowField] || 'Desconocido';
+                        if(!pivot[rowName]) { pivot[rowName] = {}; mesesArr.forEach(m => pivot[rowName][m] = 0); }
+                        pivot[rowName][d.mesMatriz] += d.tnFaltantes;
+                        colTotals[d.mesMatriz] += d.tnFaltantes; grandTotal += d.tnFaltantes;
+                    });
+                    const rows = Object.keys(pivot).sort((a, b) => {
+                        const valA = pivot[a][sortMonth] || 0, valB = pivot[b][sortMonth] || 0;
+                        if (valB !== valA) return valB - valA; 
+                        return mesesArr.reduce((sum, m) => sum + pivot[b][m], 0) - mesesArr.reduce((sum, m) => sum + pivot[a][m], 0);
+                    });
+                    return { pivot, rows, colTotals, grandTotal };
+                };
+
+                const dataVentas = buildPivot(ventas, 'comprador');
+                const dataCompras = buildPivot(compras, 'representanteVendedor');
+
+                const safeStr = (str) => String(str).replace(/['"\\]/g, ''); 
+                const safeId = (str) => encodeURIComponent(String(str)).replace(/[^a-zA-Z0-9]/g, '_');
+
+                // --- TABLA A ENTREGAR (VENTAS) (DENSA) ---
+                let htmlVenta = `<table class="w-full table-fixed text-[10px] text-right whitespace-nowrap bg-white">
+                                    <thead class="bg-blue-50 text-blue-900 uppercase tracking-widest text-[9px] font-black border-b border-blue-200">
+                                        <tr>
+                                            <th class="px-2 py-1 bg-blue-50 sticky-top-left min-w-[200px] max-w-[200px] w-[200px] text-left shadow-[1px_1px_0_#bfdbfe] z-30 truncate">Comprador</th>
+                                            ${mesesArr.map(m => `<th class="px-2 py-1 sticky-top min-w-[85px] max-w-[85px] w-[85px] border-b border-blue-200 z-20 ${m === sortMonth ? 'bg-blue-100 text-blue-950' : 'bg-blue-50'}">${this.getDynamicMonthLabel(m)}</th>`).join('')}
+                                            <th class="px-2 py-1 bg-blue-100 sticky-top text-blue-950 border-b border-blue-200 shadow-[-1px_0_0_#bfdbfe] z-30 min-w-[90px] max-w-[90px] w-[90px]" style="right:0;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-700 font-medium">`;
+                dataVentas.rows.forEach(rowName => {
+                    let rowTotal = 0;
+                    htmlVenta += `<tr data-tipo="VENTA" data-entidad="${safeStr(rowName)}" class="data-row hover:bg-blue-50/50 transition-colors group"><td class="px-2 py-1 bg-white group-hover:bg-blue-50/50 sticky-left text-left font-bold text-slate-800 min-w-[200px] max-w-[200px] w-[200px] truncate shadow-[1px_0_0_#e2e8f0] z-10" title="${rowName}">${rowName}</td>`;
+                    mesesArr.forEach(m => {
+                        const val = dataVentas.pivot[rowName][m]; rowTotal += val;
+                        const bgClass = m === sortMonth ? 'bg-blue-50/40' : ''; 
+                        const tdClass = val > 0 ? 'text-blue-700 font-bold cell-hover' : 'text-slate-300 font-normal';
+                        const idStr = `cell-VENTA-${safeId(rowName)}-${m}`;
+                        htmlVenta += `<td id="${idStr}" class="px-2 py-1 border-b border-r border-slate-100 min-w-[85px] max-w-[85px] w-[85px] ${bgClass} ${tdClass}" onclick="App.selectCell('VENTA', '${safeStr(rowName)}', '${m}', '${idStr}')">${val > 0 ? this.formatNumber(val) : '-'}</td>`;
+                    });
+                    htmlVenta += `<td class="px-2 py-1 font-black bg-blue-50/60 text-blue-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(rowTotal)}</td></tr>`;
+                });
+                if(dataVentas.rows.length === 0) htmlVenta += `<tr><td colspan="${mesesArr.length + 2}" class="px-4 py-3 text-center text-slate-400 italic">Sin datos</td></tr>`;
+                htmlVenta += `</tbody>
+                              <tfoot class="text-blue-900 font-black text-[10px] uppercase tracking-wide"><tr>
+                                <td class="px-2 py-1 bg-blue-200 sticky-bottom-left text-left shadow-[1px_-1px_0_#93c5fd] z-30 min-w-[200px] max-w-[200px] w-[200px]">TOTAL</td>`;
+                mesesArr.forEach(m => {
+                    htmlVenta += `<td class="px-2 py-1 border-r border-t-2 border-blue-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${m === sortMonth ? 'bg-blue-300 text-blue-950 border-blue-400' : 'bg-blue-200 border-blue-300'}">${dataVentas.colTotals[m] > 0 ? this.formatNumber(dataVentas.colTotals[m]) : '-'}</td>`;
+                });
+                htmlVenta += `<td class="px-2 py-1 bg-blue-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#3b82f6] border-t-2 border-blue-700 min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(dataVentas.grandTotal)}</td></tr></tfoot></table>`;
+                document.getElementById('panelVentaContent').innerHTML = htmlVenta;
+
+                // --- TABLA BALANCE (A RECIBIR - A ENTREGAR) ---
+                let htmlBalance = `<table class="w-full table-fixed text-[11px] text-right whitespace-nowrap bg-white">
+                    <tbody class="text-slate-800">
+                        <tr>
+                            <td class="px-2 py-1 bg-slate-800 text-white uppercase tracking-widest text-[9.5px] font-black sticky-left text-left min-w-[200px] max-w-[200px] w-[200px] shadow-[1px_0_0_#334155] z-10 truncate">
+                                <div class="flex items-center gap-2"><i data-lucide="scale" class="w-4 h-4 text-slate-300"></i> BALANCE (TN)</div>
+                            </td>
+                            ${mesesArr.map(m => {
+                                const bal = (dataCompras.colTotals[m] || 0) - (dataVentas.colTotals[m] || 0);
+                                let colorClass = 'text-slate-400 font-bold bg-slate-50';
+                                let valStr = '-';
+                                if (bal > 0) { colorClass = 'text-emerald-600 font-black bg-emerald-50'; valStr = '+' + this.formatNumber(bal); }
+                                else if (bal < 0) { colorClass = 'text-rose-600 font-black bg-rose-50'; valStr = this.formatNumber(bal); }
+                                
+                                return `<td class="px-2 py-1 border-r border-slate-200 min-w-[85px] max-w-[85px] w-[85px] ${colorClass}">${valStr}</td>`;
+                            }).join('')}
+                            <td class="px-2 py-1 font-black sticky right-0 z-10 shadow-[-1px_0_0_#cbd5e1] text-center min-w-[90px] max-w-[90px] w-[90px] ${
+                                (dataCompras.grandTotal - dataVentas.grandTotal) > 0 ? 'bg-emerald-100 text-emerald-700' :
+                                (dataCompras.grandTotal - dataVentas.grandTotal) < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-200 text-slate-700'
+                            }">${(dataCompras.grandTotal - dataVentas.grandTotal) > 0 ? '+' : ''}${this.formatNumber(dataCompras.grandTotal - dataVentas.grandTotal)}</td>
+                        </tr>
+                    </tbody>
+                </table>`;
+                document.getElementById('panelBalanceContent').innerHTML = htmlBalance;
+
+                // --- TABLA A RECIBIR (COMPRAS) (DENSA) ---
+                let htmlCompra = `<table class="w-full table-fixed text-[10px] text-right whitespace-nowrap bg-white">
+                                    <thead class="bg-emerald-50 text-emerald-900 uppercase tracking-widest text-[9px] font-black border-b border-emerald-200">
+                                        <tr>
+                                            <th class="px-2 py-1 bg-emerald-50 sticky-top-left min-w-[200px] max-w-[200px] w-[200px] text-left shadow-[1px_1px_0_#a7f3d0] z-30 truncate">Repre / Vendedor</th>
+                                            ${mesesArr.map(m => `<th class="px-2 py-1 sticky-top min-w-[85px] max-w-[85px] w-[85px] border-b border-emerald-200 z-20 ${m === sortMonth ? 'bg-emerald-100 text-emerald-950' : 'bg-emerald-50'}">${this.getDynamicMonthLabel(m)}</th>`).join('')}
+                                            <th class="px-2 py-1 bg-emerald-100 sticky-top text-emerald-950 border-b border-emerald-200 shadow-[-1px_0_0_#a7f3d0] z-30 min-w-[90px] max-w-[90px] w-[90px]" style="right:0;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-700 font-medium">`;
+                dataCompras.rows.forEach(rowName => {
+                    let rowTotal = 0;
+                    htmlCompra += `<tr data-tipo="COMPRA" data-entidad="${safeStr(rowName)}" class="data-row hover:bg-emerald-50/50 transition-colors group"><td class="px-2 py-1 bg-white group-hover:bg-emerald-50/50 sticky-left text-left font-bold text-slate-800 min-w-[200px] max-w-[200px] w-[200px] truncate shadow-[1px_0_0_#e2e8f0] z-10" title="${rowName}">${rowName}</td>`;
+                    mesesArr.forEach(m => {
+                        const val = dataCompras.pivot[rowName][m]; rowTotal += val;
+                        const bgClass = m === sortMonth ? 'bg-emerald-50/40' : ''; 
+                        const tdClass = val > 0 ? 'text-emerald-700 font-bold cell-hover' : 'text-slate-300 font-normal';
+                        const idStr = `cell-COMPRA-${safeId(rowName)}-${m}`;
+                        htmlCompra += `<td id="${idStr}" class="px-2 py-1 border-b border-r border-slate-100 min-w-[85px] max-w-[85px] w-[85px] ${bgClass} ${tdClass}" onclick="App.selectCell('COMPRA', '${safeStr(rowName)}', '${m}', '${idStr}')">${val > 0 ? this.formatNumber(val) : '-'}</td>`;
+                    });
+                    htmlCompra += `<td class="px-2 py-1 font-black bg-emerald-50/60 text-emerald-900 border-b border-slate-100 sticky right-0 z-10 shadow-[-1px_0_0_#e2e8f0] min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(rowTotal)}</td></tr>`;
+                });
+                if(dataCompras.rows.length === 0) htmlCompra += `<tr><td colspan="${mesesArr.length + 2}" class="px-4 py-3 text-center text-slate-400 italic">Sin datos</td></tr>`;
+                htmlCompra += `</tbody>
+                               <tfoot class="text-emerald-900 font-black text-[10px] uppercase tracking-wide"><tr>
+                                <td class="px-2 py-1 bg-emerald-200 sticky-bottom-left text-left shadow-[1px_-1px_0_#6ee7b7] z-30 min-w-[200px] max-w-[200px] w-[200px]">TOTAL</td>`;
+                mesesArr.forEach(m => {
+                    htmlCompra += `<td class="px-2 py-1 border-r border-t-2 border-emerald-600 min-w-[85px] max-w-[85px] w-[85px] z-20 ${m === sortMonth ? 'bg-emerald-300 text-emerald-950 border-emerald-400' : 'bg-emerald-200 border-emerald-300'}">${dataCompras.colTotals[m] > 0 ? this.formatNumber(dataCompras.colTotals[m]) : '-'}</td>`;
+                });
+                htmlCompra += `<td class="px-2 py-1 bg-emerald-500 text-white sticky right-0 z-30 shadow-[-1px_0_0_#10b981] border-t-2 border-emerald-700 min-w-[90px] max-w-[90px] w-[90px]">${this.formatNumber(dataCompras.grandTotal)}</td></tr></tfoot></table>`;
+                document.getElementById('panelCompraContent').innerHTML = htmlCompra;
+
+                lucide.createIcons(); 
+            },
+
+            clearSelection: function() {
+                document.querySelectorAll('.cell-selected').forEach(el => el.classList.remove('cell-selected'));
+                this.state.celdaActiva = null;
+                document.getElementById('detalleTitulo').innerHTML = `- Selecciona un volumen arriba`;
+                document.getElementById('btnClearDetalle').classList.add('hidden');
+                this.renderDetalleGrid();
+                this.setLayout('default');
+            },
+
+            selectCell: function(tipo, entidad, mes, elementId) {
+                if (this.state.celdaActiva && this.state.celdaActiva.elementId === elementId) {
+                    this.clearSelection();
+                    return;
+                }
+
+                document.querySelectorAll('.cell-selected').forEach(el => el.classList.remove('cell-selected'));
+                this.state.celdaActiva = { tipo, entidad, mes, elementId };
+                
+                this.setLayout('detail');
+
+                const cell = document.getElementById(elementId);
+                if(cell) cell.classList.add('cell-selected');
+
+                const tituloEntidad = tipo === 'VENTA' ? 'Comprador' : 'Repre/Vendedor';
+                const colorMes = tipo === 'VENTA' ? 'text-blue-600' : 'text-emerald-400';
+                document.getElementById('detalleTitulo').innerHTML = `- Filtrado: <b>${tituloEntidad} ${entidad}</b> | Rango: <b class="${colorMes}">${this.getDynamicMonthLabel(mes)}</b>`;
+                document.getElementById('btnClearDetalle').classList.remove('hidden');
+                
+                this.renderDetalleGrid();
+            },
+
+            renderDetalleGrid: function() {
+                const tbody = document.getElementById('detalleGrid');
+                const badge = document.getElementById('detalleBadge');
+                
+                if(!this.state.celdaActiva) {
+                    tbody.innerHTML = `<tr><td colspan="13" class="px-4 py-8 text-center text-slate-400 italic font-semibold text-[11px]">Selecciona un volumen en las tablas superiores para ver los contratos</td></tr>`;
+                    badge.classList.add('hidden');
+                    return;
+                }
+
+                const { tipo, entidad, mes } = this.state.celdaActiva;
+                const myName = this.config.empresaNombre;
+
+                const detalleData = this.filteredData.filter(d => {
+                    if(d.mesMatriz !== mes) return false; 
+                    const cleanEnt = String(entidad).replace(/['"\\]/g, ''); 
+                    
+                    if(tipo === 'VENTA') {
+                        const isEntidad = String(d.comprador).replace(/['"\\]/g, '') === cleanEnt;
+                        return isEntidad && d.vendedor && String(d.vendedor).toLowerCase().includes(myName);
+                    } else {
+                        const isEntidad = String(d.representanteVendedor).replace(/['"\\]/g, '') === cleanEnt;
+                        return isEntidad && d.comprador && String(d.comprador).toLowerCase().includes(myName);
+                    }
+                });
+
+                badge.innerText = `${detalleData.length} REGISTRO${detalleData.length!==1?'S':''}`;
+                badge.classList.remove('hidden');
+
+                if(detalleData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="13" class="px-4 py-8 text-center text-slate-400 text-[11px]">No se encontraron registros en la tabla.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                detalleData.forEach(row => {
+                    const textColor = tipo === 'VENTA' ? 'text-blue-700' : 'text-emerald-600';
+                    const isPrecioCG = row.tipoContrato && row.tipoContrato.toLowerCase().includes('precio cg');
+                    const rowBg = isPrecioCG ? 'bg-rose-50/80 hover:bg-rose-100/60 border-rose-100' : 'hover:bg-slate-50 border-slate-100';
+                    const tipoDisplay = isPrecioCG 
+                        ? `<span class="bg-rose-500 text-white px-2 py-0.5 rounded shadow-sm font-black uppercase text-[8px] tracking-widest">${row.tipoContrato}</span>` 
+                        : `<span class="truncate max-w-[120px] inline-block font-bold text-slate-500" title="${row.tipoContrato}">${row.tipoContrato || '-'}</span>`;
+
+                    html += `
+                        <tr class="${rowBg} transition-colors cursor-default border-b">
+                            <td class="px-2 py-1 font-bold text-slate-700 border-l border-transparent">${row.contrato || '-'}</td>
+                            <td class="px-2 py-1 text-slate-500">${row.fechaOperacion || '-'}</td>
+                            <td class="px-2 py-1 font-black text-slate-800">${row.producto || '-'}</td>
+                            <td class="px-2 py-1">${tipoDisplay}</td>
+                            <td class="px-2 py-1 font-semibold text-slate-700">${row.precio}</td>
+                            <td class="px-2 py-1 font-bold text-slate-600">${row.cosecha || '-'}</td>
+                            <td class="px-2 py-1 text-slate-700 font-bold max-w-[140px] truncate" title="${row.representanteVendedor}">${row.representanteVendedor || '-'}</td>
+                            <td class="px-2 py-1 text-slate-600 font-medium max-w-[140px] truncate" title="${row.vendedor}">${row.vendedor || '-'}</td>
+                            <td class="px-2 py-1 text-slate-600 font-medium max-w-[140px] truncate" title="${row.comprador}">${row.comprador || '-'}</td>
+                            <td class="px-2 py-1 text-slate-500">${row.fechaEntregaDesde || '-'}</td>
+                            <td class="px-2 py-1 font-semibold text-slate-800">${row.fechaEntregaHasta || '-'}</td>
+                            <td class="px-2 py-1 font-black text-right ${textColor}">${this.formatNumber(row.tnFaltantes)}</td>
+                            <td class="px-2 py-1 text-slate-700 border-r-0 whitespace-nowrap min-w-max pr-5" title="${row.destino} | SubZona: ${row.subZona} | Zona: ${row.zona}">
+                                ${row.destino || '-'} <span class="text-[8px] ml-1.5 px-1.5 py-0.5 bg-slate-200 text-slate-800 font-black rounded uppercase tracking-wider border border-slate-300 shadow-sm" title="Sub Zona Comercial">${row.subZona}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            }
+        };
+
+        App.init();
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.relative')) {
+                document.querySelectorAll('.custom-dropdown-panel').forEach(d => d.classList.remove('show'));
+            }
+        }
+    </script>
+</body>
+</html>
