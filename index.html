@@ -853,22 +853,36 @@
             },
 
             clearZonesDB: async function() {
-                const total = Object.keys(this.state.zonasDB).length;
+                const keys = Object.keys(this.state.zonasDB);
+                const total = keys.length;
                 if (total === 0) { alert("El diccionario ya está vacío."); return; }
                 if (!confirm(`⚠️ ATENCIÓN: vas a borrar TODOS los ${total} destinos del diccionario compartido. Esto afecta a todos los usuarios.\n\n¿Continuar?`)) return;
                 if (!confirm(`Última confirmación. Asegurate de tener tu backup exportado.\n\n¿Borrar definitivamente los ${total} destinos?`)) return;
 
                 const clave = this.pedirClave();
-                this.showCloudStatus('Vaciando diccionario...', 'loading');
-                const { error } = await this.sb.rpc('vaciar_zonas', { p_clave: clave });
-                if (error) { this.showCloudStatus('✖ No se pudo vaciar: ' + error.message, 'error'); return; }
+                let borrados = 0, fallidos = 0;
 
-                this.state.zonasDB = {};
+                for (const k of keys) {
+                    const zData = this.state.zonasDB[k];
+                    if (!zData || zData.id == null) { fallidos++; continue; }
+                    try {
+                        const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_id: zData.id });
+                        if (error) { fallidos++; }
+                        else { borrados++; delete this.state.zonasDB[k]; }
+                    } catch (e) { fallidos++; }
+                    if (borrados % 10 === 0) this.showCloudStatus(`Vaciando... ${borrados}/${total}`, 'loading');
+                }
+
                 this.state.unmappedDestinos.clear();
                 this.saveZonasDB();
                 this.checkUnmappedAlert();
                 this.refreshVista();
-                this.showCloudStatus('✔ Diccionario vaciado.', 'ok');
+
+                if (fallidos === 0) {
+                    this.showCloudStatus(`✔ Diccionario vaciado (${borrados} destinos).`, 'ok');
+                } else {
+                    this.showCloudStatus(`Vaciado parcial: ${borrados} borrados, ${fallidos} con error.`, 'error');
+                }
             },
 
             // Re-renderiza la vista principal si hay datos cargados
