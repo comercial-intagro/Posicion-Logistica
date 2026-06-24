@@ -816,16 +816,25 @@
                     k === dest && k !== descOrig);
                 if (descEnUso) { alert(`La descripción "${dest}" ya existe con otro ID. Usá otra o editá ese registro.`); return; }
 
-                const clave = this.pedirClave();
-                if (!clave) return;
+                let error;
+                if (idOrig != null) {
+                    // Edición: actualiza el registro original
+                    const res = await this.sb.from('zonas')
+                        .update({ id_destino: id, descripcion: dest, zona: zona, sub_zona: subZona })
+                        .eq('id_destino', idOrig);
+                    error = res.error;
+                } else {
+                    // Alta nueva
+                    const res = await this.sb.from('zonas')
+                        .insert({ id_destino: id, descripcion: dest, zona: zona, sub_zona: subZona });
+                    error = res.error;
+                }
 
-                const { error } = await this.sb.rpc('guardar_zona', {
-                    p_clave: clave, p_id: id, p_desc: dest, p_zona: zona, p_subzona: subZona, p_id_orig: idOrig
-                });
                 if (error) {
-                    if (String(error.message).includes('ID_DUPLICADO')) { alert(`El ID ${id} ya existe en la base. Usá otro.`); return; }
-                    if (String(error.message).includes('DESC_DUPLICADA')) { alert(`La descripción "${dest}" ya existe con otro ID. Editá ese registro o usá otra descripción.`); return; }
-                    alert("No se pudo guardar (¿clave incorrecta?): " + error.message); return;
+                    if (String(error.message).toLowerCase().includes('duplicate') || error.code === '23505') {
+                        alert(`El ID ${id} o la descripción "${dest}" ya existen en la base. Usá otro.`); return;
+                    }
+                    alert("No se pudo guardar: " + error.message); return;
                 }
 
                 // Si se editó y cambió la descripción, eliminar la clave vieja del diccionario
@@ -833,7 +842,7 @@
                 this.state.zonasDB[dest] = { id, zona, subZona };
                 this.state.unmappedDestinos.delete(dest);
 
-                this.cancelEditZone(); // limpia formulario y sale del modo edición
+                this.cancelEditZone();
                 this.saveZonasDB();
                 this.checkUnmappedAlert();
                 this.refreshVista();
@@ -843,46 +852,30 @@
                 const zData = this.state.zonasDB[key];
                 if (!zData) return;
                 if(!confirm(`¿Eliminar la asociación para "${key}" (ID ${zData.id})?`)) return;
-                const clave = this.pedirClave();
-                if (!clave) return;
-                const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_id: zData.id });
-                if (error) { alert("No se pudo eliminar (¿clave incorrecta?): " + error.message); return; }
+                const { error } = await this.sb.from('zonas').delete().eq('id_destino', zData.id);
+                if (error) { alert("No se pudo eliminar: " + error.message); return; }
                 delete this.state.zonasDB[key];
                 this.saveZonasDB();
                 this.refreshVista();
             },
 
             clearZonesDB: async function() {
-                const keys = Object.keys(this.state.zonasDB);
-                const total = keys.length;
+                const total = Object.keys(this.state.zonasDB).length;
                 if (total === 0) { alert("El diccionario ya está vacío."); return; }
                 if (!confirm(`⚠️ ATENCIÓN: vas a borrar TODOS los ${total} destinos del diccionario compartido. Esto afecta a todos los usuarios.\n\n¿Continuar?`)) return;
                 if (!confirm(`Última confirmación. Asegurate de tener tu backup exportado.\n\n¿Borrar definitivamente los ${total} destinos?`)) return;
 
-                const clave = this.pedirClave();
-                let borrados = 0, fallidos = 0;
+                this.showCloudStatus('Vaciando diccionario...', 'loading');
+                // Borrado directo de toda la tabla (sin RPC). Condición siempre verdadera.
+                const { error } = await this.sb.from('zonas').delete().gte('id_destino', -2147483648);
+                if (error) { alert("No se pudo vaciar: " + error.message); this.showCloudStatus('✖ Error al vaciar', 'error'); return; }
 
-                for (const k of keys) {
-                    const zData = this.state.zonasDB[k];
-                    if (!zData || zData.id == null) { fallidos++; continue; }
-                    try {
-                        const { error } = await this.sb.rpc('borrar_zona', { p_clave: clave, p_id: zData.id });
-                        if (error) { fallidos++; }
-                        else { borrados++; delete this.state.zonasDB[k]; }
-                    } catch (e) { fallidos++; }
-                    if (borrados % 10 === 0) this.showCloudStatus(`Vaciando... ${borrados}/${total}`, 'loading');
-                }
-
+                this.state.zonasDB = {};
                 this.state.unmappedDestinos.clear();
                 this.saveZonasDB();
                 this.checkUnmappedAlert();
                 this.refreshVista();
-
-                if (fallidos === 0) {
-                    this.showCloudStatus(`✔ Diccionario vaciado (${borrados} destinos).`, 'ok');
-                } else {
-                    this.showCloudStatus(`Vaciado parcial: ${borrados} borrados, ${fallidos} con error.`, 'error');
-                }
+                this.showCloudStatus(`✔ Diccionario vaciado (${total} destinos).`, 'ok');
             },
 
             // Re-renderiza la vista principal si hay datos cargados
@@ -1091,9 +1084,6 @@
                 if(idxDesc === -1 || idxZona === -1) { alert("Falta columna DESCRIPCION o ZONA."); return; }
                 if(idxId === -1) { alert("Falta la columna 'ID DESTINO' en el Excel. Es obligatoria."); return; }
 
-                const clave = this.pedirClave();
-                if (!clave) return;
-
                 const filas = [];
                 const localBatch = {};
                 const idsVistos = new Set();
@@ -1134,8 +1124,9 @@
                 }
                 if (filas.length === 0) { alert("No se encontraron filas válidas para importar."); return; }
 
-                const { data, error } = await this.sb.rpc('importar_zonas', { p_clave: clave, p_filas: filas });
-                if (error) { alert("No se pudo importar el diccionario (¿clave incorrecta?): " + error.message); return; }
+                this.showCloudStatus(`Importando ${filas.length} destinos...`, 'loading');
+                const { error } = await this.sb.from('zonas').upsert(filas, { onConflict: 'id_destino' });
+                if (error) { alert("No se pudo importar el diccionario: " + error.message); this.showCloudStatus('✖ Error al importar zonas', 'error'); return; }
 
                 Object.assign(this.state.zonasDB, localBatch);
                 Object.keys(localBatch).forEach(d => this.state.unmappedDestinos.delete(d));
@@ -1231,9 +1222,6 @@
 
             // Sube el set completo de contratos a Supabase (reemplaza lo anterior)
             subirContratos: async function(parsedData) {
-                const clave = this.pedirClave();
-                if (!clave) { alert("Importación local realizada, pero NO se subió a la nube (sin clave). Los demás no la verán."); return; }
-
                 // Mapea al esquema plano de la tabla
                 const filas = parsedData.map(d => ({
                     contrato: d.contrato,
@@ -1255,22 +1243,24 @@
 
                 this.showCloudStatus(`Subiendo ${filas.length} contratos a la nube...`, 'loading');
                 try {
-                    const LOTE = 1000;
+                    // 1) Borra todo lo anterior (reemplazo completo)
+                    const { error: errDel } = await this.sb.from('contratos').delete().gte('id', -2147483648);
+                    if (errDel) throw errDel;
+
+                    // 2) Inserta por lotes
+                    const LOTE = 500;
                     let total = 0;
                     for (let i = 0; i < filas.length; i += LOTE) {
                         const chunk = filas.slice(i, i + LOTE);
-                        const esPrimero = (i === 0);
-                        const { data, error } = await this.sb.rpc('importar_contratos', {
-                            p_clave: clave, p_filas: chunk, p_reemplazar: esPrimero
-                        });
+                        const { error } = await this.sb.from('contratos').insert(chunk);
                         if (error) throw error;
-                        total += (data || chunk.length);
+                        total += chunk.length;
                         this.showCloudStatus(`Subiendo... ${Math.min(i + LOTE, filas.length)}/${filas.length}`, 'loading');
                     }
                     this.showCloudStatus(`✔ ${total} contratos sincronizados. Todos los usuarios ya los ven.`, 'ok');
                 } catch (err) {
                     console.error(err);
-                    this.showCloudStatus(`✖ No se pudo subir (${err.message || err}). ¿Clave correcta?`, 'error');
+                    this.showCloudStatus(`✖ No se pudo subir (${err.message || err}).`, 'error');
                 }
             },
 
