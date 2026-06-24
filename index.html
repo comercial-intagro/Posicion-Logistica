@@ -447,9 +447,21 @@
                     lucide.createIcons();
                 }
                 try {
-                    // 1) Diccionario de zonas
-                    const { data: zonas, error: ez } = await this.sb.from('zonas').select('*');
-                    if (ez) throw ez;
+                    // 1) Diccionario de zonas (paginado por si supera 1000)
+                    let zonas = [];
+                    let zDesde = 0;
+                    const Z_PAGINA = 1000;
+                    while (true) {
+                        const { data: zLote, error: ez } = await this.sb
+                            .from('zonas')
+                            .select('*')
+                            .range(zDesde, zDesde + Z_PAGINA - 1);
+                        if (ez) throw ez;
+                        if (!zLote || zLote.length === 0) break;
+                        zonas = zonas.concat(zLote);
+                        if (zLote.length < Z_PAGINA) break;
+                        zDesde += Z_PAGINA;
+                    }
                     const db = {};
                     (zonas || []).forEach(z => {
                         db[this.normalizeKey(z.descripcion)] = {
@@ -461,9 +473,21 @@
                     this.state.zonasDB = db;
                     this.renderZonasTable();
 
-                    // 2) Contratos
-                    const { data: contratos, error: ec } = await this.sb.from('contratos').select('*');
-                    if (ec) throw ec;
+                    // 2) Contratos (paginado: Supabase limita a 1000 filas por consulta)
+                    let contratos = [];
+                    const PAGINA = 1000;
+                    let desde = 0;
+                    while (true) {
+                        const { data: lote, error: ec } = await this.sb
+                            .from('contratos')
+                            .select('*')
+                            .range(desde, desde + PAGINA - 1);
+                        if (ec) throw ec;
+                        if (!lote || lote.length === 0) break;
+                        contratos = contratos.concat(lote);
+                        if (lote.length < PAGINA) break; // último lote
+                        desde += PAGINA;
+                    }
 
                     if (!contratos || contratos.length === 0) {
                         if (es) {
