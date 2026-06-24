@@ -585,7 +585,15 @@
                 if (mode === 'default') {
                     pv.style.flex = "4 1 0%"; pc.style.flex = "4 1 0%"; pd.style.flex = "3 1 0%";
                 } else if (mode === 'detail') {
-                    pv.style.flex = "0 0 auto"; pc.style.flex = "0 0 auto"; pd.style.flex = "1 1 0%";
+                    // Si la selección oculta filas (entidad concreta), los paneles se achican a su contenido.
+                    // Si es un TOTAL (_ALL_), se muestran todas las filas: hay que mantener proporción fija con scroll,
+                    // si no el panel intenta crecer hasta mostrar cientos de filas y se dispara el alto.
+                    const esTotal = this.state.celdaActiva && this.state.celdaActiva.entidad === '_ALL_';
+                    if (esTotal) {
+                        pv.style.flex = "3 1 0%"; pc.style.flex = "3 1 0%"; pd.style.flex = "4 1 0%";
+                    } else {
+                        pv.style.flex = "0 0 auto"; pc.style.flex = "0 0 auto"; pd.style.flex = "1 1 0%";
+                    }
                 } else if (mode === 'max-venta') {
                     pv.style.flex = "8 1 0%"; pc.style.flex = "2 1 0%"; pd.style.flex = "2 1 0%";
                 } else if (mode === 'max-compra') {
@@ -844,8 +852,23 @@
                 this.refreshVista();
             },
 
-            clearZonesDB: function() {
-                alert("Para evitar borrados masivos accidentales en la base compartida, esta acción está deshabilitada. Eliminá los destinos uno por uno o pedí asistencia para un reset.");
+            clearZonesDB: async function() {
+                const total = Object.keys(this.state.zonasDB).length;
+                if (total === 0) { alert("El diccionario ya está vacío."); return; }
+                if (!confirm(`⚠️ ATENCIÓN: vas a borrar TODOS los ${total} destinos del diccionario compartido. Esto afecta a todos los usuarios.\n\n¿Continuar?`)) return;
+                if (!confirm(`Última confirmación. Asegurate de tener tu backup exportado.\n\n¿Borrar definitivamente los ${total} destinos?`)) return;
+
+                const clave = this.pedirClave();
+                this.showCloudStatus('Vaciando diccionario...', 'loading');
+                const { error } = await this.sb.rpc('vaciar_zonas', { p_clave: clave });
+                if (error) { this.showCloudStatus('✖ No se pudo vaciar: ' + error.message, 'error'); return; }
+
+                this.state.zonasDB = {};
+                this.state.unmappedDestinos.clear();
+                this.saveZonasDB();
+                this.checkUnmappedAlert();
+                this.refreshVista();
+                this.showCloudStatus('✔ Diccionario vaciado.', 'ok');
             },
 
             // Re-renderiza la vista principal si hay datos cargados
