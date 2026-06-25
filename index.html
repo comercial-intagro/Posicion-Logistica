@@ -79,6 +79,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black tracking-tight text-white leading-none mb-0 drop-shadow-sm">POSICION LOGISTICA ARGENTRADING SA</h1>
+                    <p id="ultimaActualizacion" class="text-[9px] text-emerald-200/80 font-bold uppercase tracking-wider mt-0.5"></p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -412,6 +413,7 @@
                 celdaActiva: null,
                 detalleSort: { campo: null, dir: 'asc', tipo: 'text' },
                 zonasSort: { campo: null, dir: 'asc' },
+                ultimaSubidaConocida: null,
                 zonasDB: {},
                 editandoZona: null,
                 unmappedDestinos: new Set()
@@ -499,6 +501,10 @@
                     this.data = this.rehidratarContratos(contratos);
                     this.initUI();
                     this.checkUnmappedAlert();
+
+                    // Lee la marca de última subida y arranca el chequeo automático
+                    await this.cargarUltimaSubida();
+                    this.iniciarChequeoActualizacion();
                 } catch (err) {
                     console.error("Error cargando de Supabase:", err);
                     if (es) {
@@ -506,6 +512,68 @@
                         lucide.createIcons();
                     }
                 }
+            },
+
+            // Lee de Supabase la fecha de la última subida y la muestra
+            cargarUltimaSubida: async function() {
+                try {
+                    const { data, error } = await this.sb
+                        .from('app_meta').select('valor')
+                        .eq('clave', 'ultima_subida_contratos').maybeSingle();
+                    if (error || !data || !data.valor) return;
+                    this.state.ultimaSubidaConocida = data.valor;
+                    this.mostrarUltimaActualizacion(data.valor);
+                } catch (e) { /* silencioso */ }
+            },
+
+            // Pinta la marca "Última actualización: ..." en el header
+            mostrarUltimaActualizacion: function(iso) {
+                const el = document.getElementById('ultimaActualizacion');
+                if (!el || !iso) return;
+                const f = new Date(iso);
+                const dd = String(f.getDate()).padStart(2, '0');
+                const mm = String(f.getMonth() + 1).padStart(2, '0');
+                const hh = String(f.getHours()).padStart(2, '0');
+                const min = String(f.getMinutes()).padStart(2, '0');
+                el.textContent = `Última actualización: ${dd}/${mm}/${f.getFullYear()} ${hh}:${min} hs`;
+            },
+
+            // Cada 30 min consulta si hubo una subida más nueva que la que tiene cargada
+            iniciarChequeoActualizacion: function() {
+                if (this._chequeoTimer) clearInterval(this._chequeoTimer);
+                this._chequeoTimer = setInterval(async () => {
+                    try {
+                        const { data, error } = await this.sb
+                            .from('app_meta').select('valor')
+                            .eq('clave', 'ultima_subida_contratos').maybeSingle();
+                        if (error || !data || !data.valor) return;
+                        // Si la fecha en la nube es distinta a la que tengo, hay datos nuevos
+                        if (this.state.ultimaSubidaConocida && data.valor !== this.state.ultimaSubidaConocida) {
+                            this.mostrarAvisoActualizacion();
+                        }
+                    } catch (e) { /* silencioso */ }
+                }, 30 * 60 * 1000); // 30 minutos
+            },
+
+            // Muestra un cartel fijo: "Hay datos nuevos - Clic para actualizar"
+            mostrarAvisoActualizacion: function() {
+                if (document.getElementById('avisoActualizacion')) return; // ya está visible
+                const div = document.createElement('div');
+                div.id = 'avisoActualizacion';
+                div.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-amber-500 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 cursor-pointer hover:bg-amber-600 transition-all animate-pulse';
+                div.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="font-black text-xs uppercase tracking-wide">Hay datos nuevos — Clic para actualizar</span>`;
+                div.onclick = () => this.recargarDatos();
+                document.body.appendChild(div);
+                lucide.createIcons();
+            },
+
+            // Recarga los datos desde la nube sin recargar toda la página
+            recargarDatos: async function() {
+                const aviso = document.getElementById('avisoActualizacion');
+                if (aviso) aviso.remove();
+                this.showCloudStatus('Actualizando datos...', 'loading');
+                await this.cargarDesdeNube();
+                this.showCloudStatus('✔ Datos actualizados.', 'ok');
             },
 
             // Convierte filas planas de Supabase al formato interno (recalcula quincenas y zona)
@@ -1282,6 +1350,15 @@
                         this.showCloudStatus(`Subiendo... ${Math.min(i + LOTE, filas.length)}/${filas.length}`, 'loading');
                     }
                     this.showCloudStatus(`✔ ${total} contratos sincronizados. Todos los usuarios ya los ven.`, 'ok');
+
+                    // Guarda la marca de fecha/hora de esta subida
+                    const ahora = new Date().toISOString();
+                    await this.sb.from('app_meta').upsert(
+                        { clave: 'ultima_subida_contratos', valor: ahora, actualizado_en: ahora },
+                        { onConflict: 'clave' }
+                    );
+                    this.state.ultimaSubidaConocida = ahora;
+                    this.mostrarUltimaActualizacion(ahora);
                 } catch (err) {
                     console.error(err);
                     this.showCloudStatus(`✖ No se pudo subir (${err.message || err}).`, 'error');
